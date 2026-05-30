@@ -1,0 +1,2384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PCA - Document Cabinet</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --primary: #1a3a5c; --primary-light: #2d6a9f; --accent: #e8a838;
+    --bg: #f0f2f5; --card: #fff; --text: #333; --text-light: #777;
+    --border: #d0d5dd; --success: #28a745; --danger: #dc3545;
+    --radius: 10px; --shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .header { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,.15); position: sticky; top: 0; z-index: 100; }
+  .header h1 { font-size: 17px; display: flex; align-items: center; gap: 8px; }
+  .header h1 small { font-size: 11px; font-weight: 400; opacity: .8; display: block; }
+  .header-actions { display: flex; gap: 6px; }
+  .container { max-width: 1000px; margin: 0 auto; padding: 10px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+  .stat-card { background: var(--card); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--shadow); border-left: 4px solid var(--primary-light); }
+  .stat-card .num { font-size: 20px; font-weight: 700; color: var(--primary); }
+  .stat-card .label { font-size: 10px; color: var(--text-light); margin-top: 2px; }
+  .stat-card.green { border-left-color: var(--success); }
+  .stat-card.orange { border-left-color: var(--accent); }
+
+  .sys-tabs { display: flex; background: var(--card); border-radius: var(--radius) var(--radius) 0 0; overflow: hidden; box-shadow: var(--shadow); margin-bottom: 0; }
+  .sys-tabs button { flex: 1; padding: 10px 6px; border: none; background: transparent; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text-light); transition: all .2s; border-bottom: 3px solid transparent; }
+  .sys-tabs button.active { color: var(--primary); border-bottom-color: var(--primary); background: rgba(26,58,92,.06); }
+  .sys-tabs button.active.int { color: var(--primary-light); border-bottom-color: var(--primary-light); }
+  .sys-tabs button.active.tb { color: #8a2be2; border-bottom-color: #8a2be2; }
+
+  .assign-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; max-width: 520px; margin: 0 auto; }
+  .assign-card h2 { font-size: 17px; color: var(--primary); margin-bottom: 16px; text-align: center; }
+  .assign-card .form-group { margin-bottom: 14px; }
+  .assign-card .form-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; }
+  .assign-card .form-group input, .assign-card .form-group select, .assign-card .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; outline: none; font-family: inherit; background: #fff; }
+  .assign-card .form-group input:focus, .assign-card .form-group select:focus, .assign-card .form-group textarea:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(45,106,159,.15); }
+  .assign-card .form-group textarea { resize: vertical; min-height: 44px; }
+  .assign-card .btn-save { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; background: var(--primary-light); color: #fff; transition: all .2s; }
+  .assign-card .btn-save:hover { background: var(--primary); }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; background: var(--card); padding: 10px 12px; border-radius: var(--radius); box-shadow: var(--shadow); }
+  .toolbar .search-wrap { flex: 1; min-width: 160px; position: relative; }
+  .toolbar .search-wrap input { width: 100%; padding: 8px 10px 8px 30px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; }
+  .toolbar .search-wrap input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(45,106,159,.15); }
+  .toolbar .search-wrap .icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: #999; font-size: 13px; }
+  .toolbar select { padding: 7px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; background: #fff; max-width: 160px; }
+  .toolbar select:focus { border-color: var(--primary-light); }
+  .btn { padding: 7px 14px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 5px; justify-content: center; white-space: nowrap; }
+  .btn-primary { background: var(--primary-light); color: #fff; }
+  .btn-primary:hover { background: var(--primary); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #1e7e34; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #b52d3a; }
+  .btn-warning { background: var(--accent); color: #333; }
+  .btn-warning:hover { background: #d4952f; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: #555; }
+  .btn-outline:hover { background: var(--bg); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .card-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .rec-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; border: 1px solid transparent; transition: all .2s; }
+  .rec-card:hover { border-color: var(--primary-light); box-shadow: 0 3px 12px rgba(0,0,0,.1); }
+  .rec-card .top { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 12px 4px; gap: 8px; }
+  .rec-card .top .info { flex: 1; }
+  .rec-card .top .ref { display: inline-block; padding: 2px 10px; border-radius: 14px; font-size: 13px; font-weight: 700; color: #fff; background: var(--primary-light); }
+  .rec-card .top .train { display: block; font-weight: 600; font-size: 15px; color: var(--primary); margin-top: 4px; }
+  .rec-card .body { padding: 2px 12px 8px; }
+  .rec-card .location { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; margin-top: 4px; }
+  .rec-card .location .loc-icon { font-size: 15px; }
+  .rec-card .location .loc-text { font-size: 13px; font-weight: 500; }
+  .rec-card .location .loc-date { font-size: 11px; color: var(--primary-light); font-weight: 600; }
+  .rec-card .location .loc-hint { font-size: 11px; color: var(--text-light); }
+  .rec-card .location .no-loc { font-size: 12px; color: #999; font-style: italic; }
+  .rec-card .actions { display: flex; gap: 6px; border-top: 1px solid var(--bg); padding: 7px 12px; background: #fafbfc; flex-wrap: wrap; }
+  .rec-card .actions .doc-name { font-size: 11px; color: var(--text-light); padding: 2px 0; }
+  .empty-state { text-align: center; padding: 40px 16px; color: #999; }
+  .empty-state h3 { font-size: 16px; color: #666; margin-bottom: 4px; }
+  .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.45); z-index: 1000; justify-content: center; align-items: center; padding: 16px; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: var(--card); border-radius: 12px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; padding: 20px; box-shadow: 0 8px 40px rgba(0,0,0,.2); animation: modalIn .25s ease; }
+  @keyframes modalIn { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
+  .modal h2 { font-size: 16px; margin-bottom: 12px; color: var(--primary); }
+  .modal .form-group { margin-bottom: 10px; }
+  .modal .form-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 3px; }
+  .modal .form-group input, .modal .form-group select, .modal .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; outline: none; font-family: inherit; }
+  .modal .form-group textarea { resize: vertical; min-height: 40px; }
+  .modal .form-group input:focus, .modal .form-group select:focus, .modal .form-group textarea:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(45,106,159,.15); }
+  .modal .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+  .toast { position: fixed; bottom: 20px; left: 16px; right: 16px; background: var(--primary); color: #fff; padding: 10px 16px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,.2); font-size: 13px; transform: translateY(80px); opacity: 0; transition: all .3s; z-index: 2000; text-align: center; max-width: 360px; margin: 0 auto; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+  .sub-tabs { display: flex; background: var(--card); border-radius: 0 0 var(--radius) var(--radius); overflow: hidden; margin-bottom: 10px; box-shadow: var(--shadow); border-top: 1px solid var(--bg); }
+  .sub-tabs button { flex: 1; padding: 9px 6px; border: none; background: transparent; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-light); transition: all .2s; border-bottom: 3px solid transparent; }
+  .sub-tabs button.active { color: var(--primary-light); border-bottom-color: var(--primary-light); background: rgba(45,106,159,.05); }
+  .hide { display: none !important; }
+  .loc-group { margin-bottom: 14px; }
+  .loc-group h3 { font-size: 13px; color: var(--primary); margin-bottom: 4px; padding-bottom: 3px; border-bottom: 2px solid var(--accent); display: flex; align-items: center; gap: 6px; }
+  .loc-badge { display: inline-flex; align-items: center; gap: 4px; background: #fff; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 11px; margin: 2px; }
+  .loc-badge .date-tag { font-size: 10px; color: var(--primary-light); font-weight: 600; }
+  .field-required::after { content: ' *'; color: var(--danger); }
+  .action-bar { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+  .import-input { display: none; }
+
+  @media (min-width: 600px) {
+    .header h1 { font-size: 20px; }
+    .header h1 small { font-size: 12px; display: inline; }
+    .card-grid { grid-template-columns: repeat(2, 1fr); }
+    .assign-card { padding: 28px; }
+  }
+  @media (min-width: 900px) {
+    .card-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 420px) {
+    .header { padding: 10px; }
+    .header h1 { font-size: 14px; }
+    .container { padding: 6px; }
+    .toolbar { flex-direction: column; }
+    .toolbar .search-wrap { min-width: auto; width: 100%; }
+    .toolbar select { width: 100%; max-width: none; }
+    .stats { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .stat-card { padding: 8px 10px; }
+    .stat-card .num { font-size: 17px; }
+    .rec-card .top { flex-direction: column; }
+    .action-bar { flex-direction: column; }
+    .action-bar .btn { width: 100%; }
+    .assign-card { padding: 14px; }
+    .sys-tabs button { font-size: 11px; padding: 8px 4px; }
+    .sub-tabs button { font-size: 11px; padding: 7px 3px; }
+  }
+  .date-range { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .date-range input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; outline: none; }
+  .date-range input:focus { border-color: var(--primary-light); }
+  .sys-badge { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 600; margin-left: 4px; }
+  .sys-badge.int { background: rgba(45,106,159,.12); color: var(--primary-light); }
+  .sys-badge.tb { background: rgba(138,43,226,.12); color: #8a2be2; }
+  .ref-tag { display: inline-flex; align-items: center; gap: 4px; background: #fff; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; margin: 3px; }
+  .ref-tag .del-ref { cursor: pointer; color: var(--danger); font-weight: 700; font-size: 15px; line-height: 1; margin-left: 4px; }
+  .ref-tag .del-ref:hover { color: #b52d3a; }
+  .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 600px; margin: 40px auto; padding: 0 10px; }
+  .home-card { background: var(--card); border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,.1); padding: 40px 20px; text-align: center; cursor: pointer; transition: all .25s; border: 2px solid transparent; }
+  .home-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,.15); border-color: var(--primary-light); }
+  .home-card .icon { font-size: 40px; margin-bottom: 10px; }
+  .home-card h2 { font-size: 18px; color: var(--primary); margin-bottom: 4px; }
+  .home-card p { font-size: 12px; color: var(--text-light); }
+  .section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .section-header .back-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; color: var(--primary); font-weight: 600; }
+  .section-header .back-btn:hover { background: var(--bg); }
+  @media (max-width: 420px) { .home-grid { grid-template-columns: 1fr; margin: 20px auto; } .home-card { padding: 30px 20px; } }
+  .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+  .login-box { background: #fff; border-radius: 16px; padding: 36px 28px; width: 100%; max-width: 380px; margin: 16px; box-shadow: 0 12px 48px rgba(0,0,0,.3); text-align: center; }
+  .login-box .lock { font-size: 40px; margin-bottom: 10px; }
+  .login-box h1 { font-size: 20px; color: var(--primary); margin-bottom: 4px; }
+  .login-box .sub { font-size: 12px; color: var(--text-light); margin-bottom: 24px; }
+  .login-box .form-group { margin-bottom: 14px; text-align: left; }
+  .login-box .form-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; }
+  .login-box .form-group input { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; outline: none; font-family: inherit; }
+  .login-box .form-group input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(45,106,159,.15); }
+  .login-box .btn-login { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; background: var(--primary-light); color: #fff; transition: all .2s; }
+  .login-box .btn-login:hover { background: var(--primary); }
+  .login-box .error { color: var(--danger); font-size: 12px; margin-top: 8px; min-height: 18px; }
+  .login-box .footer { margin-top: 20px; font-size: 11px; color: var(--text-light); padding-top: 16px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="lock">&#128274;</div>
+    <h1>Planning and Control<br>Documents System</h1>
+    <p class="sub">Sign in to continue</p>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="Enter username" onkeydown="if(event.key==='Enter') tryLogin()">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Enter password" onkeydown="if(event.key==='Enter') tryLogin()">
+    </div>
+    <button class="btn-login" onclick="tryLogin()">Sign In</button>
+    <div class="error" id="loginError"></div>
+    <div class="footer">Developed by Hicham El Khamlichi # 2026<br>Talgo/ Madinah KSA</div>
+  </div>
+</div>
+
+<div class="header">
+  <h1>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    PCA <small>Document Cabinet</small>
+  </h1>
+  <div class="header-actions" id="headerActions">
+    <button class="btn btn-sm btn-outline" onclick="goHome()" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3);display:none" id="btnHome">&#8592; Home</button>
+    <button class="btn btn-sm btn-outline" onclick="logout()" style="background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3);display:none" id="btnLogout">&#128682; Logout</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <div id="homeSection">
+    <div class="home-grid">
+      <div class="home-card" onclick="goQMW()">
+        <div class="icon">&#128203;</div>
+        <h2>QMW Documents</h2>
+        <p>Interventions, Time Base, Corrective QMW, Vandalism, Modifications, Rework</p>
+      </div>
+      <div class="home-card" onclick="goFacility()">
+        <div class="icon">&#127963;</div>
+        <h2>Facility Documents</h2>
+        <p>Manage facility-related documents</p>
+      </div>
+      <div class="home-card" onclick="goHMW()">
+        <div class="icon">&#128200;</div>
+        <h2>HMW Documents</h2>
+        <p>Manage HMW-related documents</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="qmwSection" class="hide">
+    <div class="section-header">
+      <button class="back-btn" onclick="goHome()">&#8592; Back</button>
+      <span style="font-size:13px;font-weight:600;color:var(--primary)">QMW Documents</span>
+      <button class="btn btn-success btn-sm" onclick="openConfigModal()" style="margin-left:auto">Locations</button>
+    </div>
+    <div class="stats" id="stats"></div>
+
+    <div class="sys-tabs" id="sysTabs">
+      <button class="active int" onclick="switchSystem('interventions',this)">Interventions</button>
+      <button class="tb" onclick="switchSystem('timebase',this)">Time Base</button>
+      <button class="tb" onclick="switchSystem('corrective',this)">Corrective QMW</button>
+      <button class="tb" onclick="switchSystem('vandalism',this)">Vandalism</button>
+      <button class="tb" onclick="switchSystem('modifications',this)">Modifications</button>
+      <button class="tb" onclick="switchSystem('rework',this)">Rework</button>
+    </div>
+
+    <div class="sub-tabs" id="subTabs">
+      <button class="active" onclick="switchSubTab('asignar',this)">Assign</button>
+      <button onclick="switchSubTab('buscar',this)">Search</button>
+      <button onclick="switchSubTab('ubicaciones',this)">Locations</button>
+      <button onclick="switchSubTab('recientes',this)">Recent</button>
+      <button onclick="switchSubTab('estadisticas',this)">Statistics</button>
+    </div>
+
+    <div id="tab-asignar">
+      <div class="assign-card">
+        <h2 id="assignTitle">Assign document to cabinet</h2>
+        <div class="form-group" id="asTrainGroup">
+          <label class="field-required">Train</label>
+          <input type="text" id="asTrain" list="trainSuggestions" placeholder="e.g. SAS1B-01">
+          <datalist id="trainSuggestions"></datalist>
+        </div>
+        <div class="form-group" id="asCategoryGroup" style="display:none">
+          <label class="field-required">Category</label>
+          <select id="asCategory" onchange="onCategoryChange()">
+            <option value="">Select...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="field-required" id="refLabel">Intervention type</label>
+          <div id="asRefContainer" style="display:flex;gap:6px">
+            <input type="text" id="asRef" list="refDatalist" placeholder="Search or select..." style="flex:1">
+            <datalist id="refDatalist"></datalist>
+            <button class="btn btn-sm btn-outline" id="btnManageRefs" onclick="openRefsModal()" title="Manage references" style="display:none">&#9998;</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="field-required">Document date</label>
+          <input type="date" id="asDate">
+        </div>
+        <div class="form-group">
+          <label class="field-required">Cabinet location</label>
+          <select id="asLocation">
+            <option value="">Select...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <textarea id="asNotes" placeholder="e.g. Second shelf, blue folder..."></textarea>
+        </div>
+        <button class="btn-save" onclick="assignDocument()">Save Assignment</button>
+        <div style="margin-top:12px">
+          <button class="btn btn-warning btn-sm" onclick="document.getElementById('importDocInput').click()" style="width:100%">Import Documents (Excel)</button>
+          <input type="file" id="importDocInput" class="import-input" accept=".xlsx,.xls" onchange="importDocuments(event)">
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-buscar" class="hide">
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="icon">&#128269;</span>
+          <input type="text" id="searchInput" placeholder="Search train or reference..." oninput="renderSearch()">
+        </div>
+        <select id="trainFilter" onchange="renderSearch()">
+          <option value="">All trains</option>
+        </select>
+        <select id="refFilter" onchange="renderSearch()">
+          <option value="">All refs</option>
+        </select>
+        <select id="catFilter" onchange="renderSearch()" style="display:none">
+          <option value="">All categories</option>
+        </select>
+        <select id="locFilter" onchange="renderSearch()">
+          <option value="">All locations</option>
+        </select>
+        <div class="date-range">
+          <input type="date" id="dateFrom" onchange="renderSearch()" title="Date from">
+          <span style="font-size:11px;color:#999">-</span>
+          <input type="date" id="dateTo" onchange="renderSearch()" title="Date to">
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <button class="btn btn-outline btn-sm" onclick="clearFilters()">Clear Filters</button>
+      </div>
+      <div id="searchResults" class="card-grid"></div>
+    </div>
+
+    <div id="tab-ubicaciones" class="hide">
+      <div id="locationView"></div>
+    </div>
+
+    <div id="tab-recientes" class="hide">
+      <div id="recentView"></div>
+    </div>
+
+    <div id="tab-estadisticas" class="hide">
+      <div id="statsView"></div>
+    </div>
+  </div>
+
+  <div id="facilitySection" class="hide">
+    <div class="section-header">
+      <button class="back-btn" onclick="goHome()">&#8592; Back</button>
+      <span style="font-size:13px;font-weight:600;color:var(--primary)">Facility Documents</span>
+      <button class="btn btn-success btn-sm" onclick="openConfigModal()" style="margin-left:auto">Locations</button>
+    </div>
+    <div class="stats" id="facilityStats"></div>
+
+    <div class="sub-tabs" id="facilitySubTabs">
+      <button class="active" onclick="switchFacilitySubTab('asignar',this)">Assign</button>
+      <button onclick="switchFacilitySubTab('buscar',this)">Search</button>
+      <button onclick="switchFacilitySubTab('ubicaciones',this)">Locations</button>
+      <button onclick="switchFacilitySubTab('recientes',this)">Recent</button>
+      <button onclick="switchFacilitySubTab('estadisticas',this)">Statistics</button>
+    </div>
+
+    <div id="facility-tab-asignar">
+      <div class="assign-card">
+        <h2 id="facilityAssignTitle">Assign document to cabinet - Facility Registers</h2>
+        <div class="form-group" id="facAsCategoryGroup">
+          <label class="field-required">Category</label>
+          <select id="facAsCategory" onchange="onFacilityCategoryChange()">
+            <option value="">Select...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="field-required">Reference</label>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="facAsRef" list="facRefDatalist" placeholder="Search or select..." style="flex:1">
+            <datalist id="facRefDatalist"></datalist>
+            <button class="btn btn-sm btn-outline" onclick="openFacilityRefsModal()" title="Manage references">&#9998;</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="field-required">Document date</label>
+          <input type="date" id="facAsDate">
+        </div>
+        <div class="form-group">
+          <label class="field-required">Cabinet location</label>
+          <select id="facAsLocation">
+            <option value="">Select...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <textarea id="facAsNotes" placeholder="e.g. Second shelf, blue folder..."></textarea>
+        </div>
+        <button class="btn-save" onclick="facilityAssignDocument()">Save Assignment</button>
+        <div style="margin-top:12px">
+          <button class="btn btn-warning btn-sm" onclick="document.getElementById('facImportDocInput').click()" style="width:100%">Import Documents (Excel)</button>
+          <input type="file" id="facImportDocInput" class="import-input" accept=".xlsx,.xls" onchange="facilityImportDocuments(event)">
+        </div>
+      </div>
+    </div>
+
+    <div id="facility-tab-buscar" class="hide">
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="icon">&#128269;</span>
+          <input type="text" id="facSearchInput" placeholder="Search reference..." oninput="renderFacilitySearch()">
+        </div>
+        <select id="facRefFilter" onchange="renderFacilitySearch()">
+          <option value="">All refs</option>
+        </select>
+        <select id="facCatFilter" onchange="renderFacilitySearch()">
+          <option value="">All categories</option>
+        </select>
+        <select id="facLocFilter" onchange="renderFacilitySearch()">
+          <option value="">All locations</option>
+        </select>
+        <div class="date-range">
+          <input type="date" id="facDateFrom" onchange="renderFacilitySearch()" title="Date from">
+          <span style="font-size:11px;color:#999">-</span>
+          <input type="date" id="facDateTo" onchange="renderFacilitySearch()" title="Date to">
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <button class="btn btn-outline btn-sm" onclick="facilityClearFilters()">Clear Filters</button>
+      </div>
+      <div id="facSearchResults" class="card-grid"></div>
+    </div>
+
+    <div id="facility-tab-ubicaciones" class="hide">
+      <div id="facLocationView"></div>
+    </div>
+
+    <div id="facility-tab-recientes" class="hide">
+      <div id="facRecentView"></div>
+    </div>
+
+    <div id="facility-tab-estadisticas" class="hide">
+      <div id="facStatsView"></div>
+    </div>
+  </div>
+
+  <div id="hmwSection" class="hide">
+    <div class="section-header">
+      <button class="back-btn" onclick="goHome()">&#8592; Back</button>
+      <span style="font-size:13px;font-weight:600;color:var(--primary)">HMW Documents</span>
+      <button class="btn btn-success btn-sm" onclick="openConfigModal()" style="margin-left:auto">Locations</button>
+    </div>
+    <div class="stats" id="hmwStats"></div>
+
+    <div class="sub-tabs" id="hmwSubTabs">
+      <button class="active" onclick="switchHMWSubTab('asignar',this)">Assign</button>
+      <button onclick="switchHMWSubTab('buscar',this)">Search</button>
+      <button onclick="switchHMWSubTab('ubicaciones',this)">Locations</button>
+      <button onclick="switchHMWSubTab('recientes',this)">Recent</button>
+      <button onclick="switchHMWSubTab('estadisticas',this)">Statistics</button>
+    </div>
+
+    <div id="hmw-tab-asignar">
+      <div class="assign-card">
+        <h2 id="hmwAssignTitle">Assign document to cabinet - HMW Registers</h2>
+        <div class="form-group" id="hmwAsCategoryGroup">
+          <label class="field-required">Category</label>
+          <select id="hmwAsCategory" onchange="onHMWCategoryChange()">
+            <option value="">Select...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="field-required">Reference</label>
+          <div style="display:flex;gap:6px">
+            <input type="text" id="hmwAsRef" list="hmwRefDatalist" placeholder="Search or select..." style="flex:1">
+            <datalist id="hmwRefDatalist"></datalist>
+            <button class="btn btn-sm btn-outline" onclick="openHMWRefsModal()" title="Manage references">&#9998;</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="field-required">Document date</label>
+          <input type="date" id="hmwAsDate">
+        </div>
+        <div class="form-group">
+          <label class="field-required">Cabinet location</label>
+          <select id="hmwAsLocation">
+            <option value="">Select...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <textarea id="hmwAsNotes" placeholder="e.g. Second shelf, blue folder..."></textarea>
+        </div>
+        <button class="btn-save" onclick="hmwAssignDocument()">Save Assignment</button>
+        <div style="margin-top:12px">
+          <button class="btn btn-warning btn-sm" onclick="document.getElementById('hmwImportDocInput').click()" style="width:100%">Import Documents (Excel)</button>
+          <input type="file" id="hmwImportDocInput" class="import-input" accept=".xlsx,.xls" onchange="hmwImportDocuments(event)">
+        </div>
+      </div>
+    </div>
+
+    <div id="hmw-tab-buscar" class="hide">
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="icon">&#128269;</span>
+          <input type="text" id="hmwSearchInput" placeholder="Search reference..." oninput="renderHMWSearch()">
+        </div>
+        <select id="hmwRefFilter" onchange="renderHMWSearch()">
+          <option value="">All refs</option>
+        </select>
+        <select id="hmwCatFilter" onchange="renderHMWSearch()">
+          <option value="">All categories</option>
+        </select>
+        <select id="hmwLocFilter" onchange="renderHMWSearch()">
+          <option value="">All locations</option>
+        </select>
+        <div class="date-range">
+          <input type="date" id="hmwDateFrom" onchange="renderHMWSearch()" title="Date from">
+          <span style="font-size:11px;color:#999">-</span>
+          <input type="date" id="hmwDateTo" onchange="renderHMWSearch()" title="Date to">
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <button class="btn btn-outline btn-sm" onclick="hmwClearFilters()">Clear Filters</button>
+      </div>
+      <div id="hmwSearchResults" class="card-grid"></div>
+    </div>
+
+    <div id="hmw-tab-ubicaciones" class="hide">
+      <div id="hmwLocationView"></div>
+    </div>
+
+    <div id="hmw-tab-recientes" class="hide">
+      <div id="hmwRecentView"></div>
+    </div>
+
+    <div id="hmw-tab-estadisticas" class="hide">
+      <div id="hmwStatsView"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="modalConfig">
+  <div class="modal">
+    <h2 id="configModalTitle">Configure Locations</h2>
+    <p style="font-size:12px;color:#666;margin-bottom:10px" id="configModalDesc">Add cabinet locations (shelves, drawers, bins...)</p>
+    <div class="form-group">
+      <label>New location</label>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="newLoc" placeholder="e.g. Shelf 1, Drawer A..." style="flex:1">
+        <button class="btn btn-success" onclick="addLocation()">+</button>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <button class="btn btn-warning btn-sm" onclick="document.getElementById('importLocInput').click()">Import from Excel</button>
+      <input type="file" id="importLocInput" class="import-input" accept=".xlsx,.xls" onchange="importLocations(event)">
+    </div>
+    <div id="locationList" style="margin-top:6px"></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalConfig')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalRefs">
+  <div class="modal">
+    <h2 id="refsModalTitle">Manage References</h2>
+    <p style="font-size:12px;color:#666;margin-bottom:10px">Add or remove reference types for this system</p>
+    <div class="form-group" id="refCatGroup" style="display:none">
+      <label>Category</label>
+      <select id="refCat">
+        <option value="">Select...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>New reference</label>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="newRef" placeholder="e.g. RI- (TB)" style="flex:1">
+        <button class="btn btn-success" onclick="addReference()">+</button>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <button class="btn btn-warning btn-sm" onclick="document.getElementById('importRefsInput').click()">Import from Excel</button>
+      <input type="file" id="importRefsInput" class="import-input" accept=".xlsx,.xls" onchange="importReferences(event)">
+    </div>
+    <div id="refsList" style="margin-top:6px"></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalRefs')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ======================== SYSTEMS ========================
+  let currentSystem = 'interventions';
+
+  const SYSTEMS = {
+    interventions: {
+      key: 'interventions',
+      name: 'Interventions',
+      storeRecs: 'pca_int_recs',
+      storeLocs: 'pca_int_locs',
+      hasFixedRefs: true,
+      hasTrains: true,
+      color: 'int'
+    },
+    timebase: {
+      key: 'timebase',
+      name: 'Time Base',
+      storeRecs: 'pca_tb_recs',
+      storeLocs: 'pca_tb_locs',
+      storeRefs: 'pca_tb_refs',
+      hasFixedRefs: false,
+      hasTrains: true,
+      color: 'tb'
+    },
+    corrective: {
+      key: 'corrective',
+      name: 'Corrective QMW',
+      storeRecs: 'pca_cq_recs',
+      storeLocs: 'pca_cq_locs',
+      storeRefs: 'pca_cq_refs',
+      hasFixedRefs: false,
+      hasTrains: true,
+      color: 'tb'
+    },
+    vandalism: {
+      key: 'vandalism',
+      name: 'Vandalism',
+      storeRecs: 'pca_vd_recs',
+      storeLocs: 'pca_vd_locs',
+      storeRefs: 'pca_vd_refs',
+      hasFixedRefs: false,
+      hasTrains: true,
+      color: 'tb'
+    },
+    modifications: {
+      key: 'modifications',
+      name: 'Modifications',
+      storeRecs: 'pca_md_recs',
+      storeLocs: 'pca_md_locs',
+      storeRefs: 'pca_md_refs',
+      hasFixedRefs: false,
+      hasTrains: true,
+      hasCategories: true,
+      categories: ['Electrical', 'Mechanical'],
+      color: 'tb'
+    },
+    rework: {
+      key: 'rework',
+      name: 'Rework',
+      storeRecs: 'pca_rw_recs',
+      storeLocs: 'pca_rw_locs',
+      storeRefs: 'pca_rw_refs',
+      hasFixedRefs: false,
+      hasTrains: true,
+      hasCategories: true,
+      categories: ['Electrical', 'Mechanical'],
+      color: 'tb'
+    },
+    facility_registers: {
+      key: 'facility_registers',
+      name: 'Facility Registers',
+      storeRecs: 'pca_fr_recs',
+      storeLocs: 'pca_fr_locs',
+      storeRefs: 'pca_fr_refs',
+      hasFixedRefs: false,
+      hasTrains: false,
+      hasCategories: true,
+      categories: ['Internal', 'External'],
+      color: 'tb'
+    },
+    hmw_registers: {
+      key: 'hmw_registers',
+      name: 'HMW Registers',
+      storeRecs: 'pca_hmw_recs',
+      storeLocs: 'pca_hmw_locs',
+      storeRefs: 'pca_hmw_refs',
+      hasFixedRefs: false,
+      hasTrains: false,
+      hasCategories: true,
+      categories: ['Preventive', 'Corrective'],
+      color: 'tb'
+    }
+  };
+
+  // ======================== SUPABASE ========================
+  // 🔴 REEMPLAZA estos valores con los de tu proyecto Supabase
+  // Ve a: Supabase Dashboard → Settings → API
+  const SUPABASE_URL = 'https://fthikspsimyjkossvouk.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_-LcVzvPR6iehQF1C8os9KQ_HOw7h0Cx';
+
+  const REST_URL = SUPABASE_URL + '/rest/v1';
+  const AUTH_URL = SUPABASE_URL + '/auth/v1';
+  let supabaseToken = null;
+
+  // Caché en memoria
+  const dataCache = {};
+  let cacheLoaded = false;
+
+  async function supabaseFetch(path, opts = {}) {
+    const headers = {
+      'apikey': SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+      ...opts.headers
+    };
+    if (supabaseToken) headers['Authorization'] = 'Bearer ' + supabaseToken;
+    const res = await fetch(SUPABASE_URL + path, { ...opts, headers });
+    if (!res.ok) throw new Error('Supabase error: ' + res.status + ' ' + (await res.text()));
+    return res;
+  }
+
+  async function loadAllData() {
+    if (cacheLoaded) return;
+    try {
+      const res = await supabaseFetch('/rest/v1/systems?select=*');
+      const rows = await res.json();
+      for (const row of rows) {
+        dataCache[row.key] = { recs: row.recs || [], locs: row.locs || [], refs: row.refs || [] };
+      }
+      for (const key of Object.keys(SYSTEMS)) {
+        if (!dataCache[key]) dataCache[key] = { recs: [], locs: [], refs: [] };
+      }
+      cacheLoaded = true;
+    } catch (e) {
+      console.warn('Error loading data', e);
+      for (const key of Object.keys(SYSTEMS)) {
+        if (!dataCache[key]) dataCache[key] = { recs: [], locs: [], refs: [] };
+      }
+      cacheLoaded = true;
+    }
+  }
+
+  async function saveSystemData(systemKey) {
+    try {
+      const data = dataCache[systemKey] || { recs: [], locs: [], refs: [] };
+      await supabaseFetch('/rest/v1/systems', {
+        method: 'POST',
+        body: JSON.stringify({ key: systemKey, recs: data.recs, locs: data.locs, refs: data.refs }),
+        headers: { 'Prefer': 'resolution=merge-duplicates' }
+      });
+    } catch (e) {
+      console.error('Error saving ' + systemKey, e);
+    }
+  }
+
+  // Reemplazo de localStorage - usa caché en memoria + Supabase
+  function getLocs() {
+    const key = sys().key;
+    if (!dataCache[key]) dataCache[key] = { recs: [], locs: [], refs: [] };
+    return dataCache[key].locs || [];
+  }
+  function setLocs(v) {
+    const key = sys().key;
+    if (!dataCache[key]) dataCache[key] = { recs: [], locs: [], refs: [] };
+    dataCache[key].locs = v;
+    saveSystemData(key);
+  }
+
+  function getRecs() {
+    const key = sys().key;
+    if (!dataCache[key]) dataCache[key] = { recs: [], locs: [], refs: [] };
+    return dataCache[key].recs || [];
+  }
+  function setRecs(v) {
+    const key = sys().key;
+    if (!dataCache[key]) dataCache[key] = { recs: [], locs: [], refs: [] };
+    dataCache[key].recs = v;
+    saveSystemData(key);
+  }
+
+  function getRefs() {
+    if (sys().hasFixedRefs) return FIXED_REFS;
+    const key = sys().key;
+    if (!dataCache[key]) dataCache[key] = { recs: [], locs: [], refs: [] };
+    return dataCache[key].refs || [];
+  }
+  function setRefs(v) {
+    if (!sys().hasFixedRefs) {
+      const key = sys().key;
+      if (!dataCache[key]) dataCache[key] = { recs: [], locs: [], refs: [] };
+      dataCache[key].refs = v;
+      saveSystemData(key);
+    }
+  }
+
+  const FIXED_REFS = ['IR', 'IS', 'IB', 'IM1', 'IM2', 'IM3', 'IM4', 'IM5', 'IM6', 'R'];
+  const PREDEFINED_TRAINS = Array.from({length: 36}, (_, i) => 'SAS1B-' + String(i + 1).padStart(2, '0'));
+
+  function sys() { return SYSTEMS[currentSystem]; }
+
+  function getRefDisplay(r) {
+    if (sys().hasCategories) return r.category + ' - ' + r.name;
+    return r;
+  }
+  function getRefName(r) {
+    if (sys().hasCategories) return r.name;
+    return r;
+  }
+  function refMatch(a, b) {
+    if (sys().hasCategories) return a.category === b.category && a.name === b.name;
+    return a === b;
+  }
+
+  function nextId(arr) { return arr.length ? Math.max(...arr.map(x => x.id)) + 1 : 1; }
+
+  // ======================== SYSTEM SWITCHING ========================
+  function switchSystem(sysKey, btn) {
+    currentSystem = sysKey;
+    document.querySelectorAll('#sysTabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const hasCat = sys().hasCategories || false;
+    const hasTrain = sys().hasTrains !== false;
+    document.getElementById('asTrainGroup').style.display = hasTrain ? '' : 'none';
+    document.getElementById('asCategoryGroup').style.display = hasCat ? '' : 'none';
+    document.getElementById('refCatGroup').style.display = hasCat ? '' : 'none';
+    document.getElementById('catFilter').style.display = hasCat ? '' : 'none';
+    document.getElementById('btnManageRefs').style.display = sys().hasFixedRefs ? 'none' : '';
+    document.getElementById('refLabel').textContent = hasCat ? 'Reference' : (sys().hasFixedRefs ? 'Intervention type' : 'Reference');
+    refreshAll();
+  }
+
+  // ======================== TOAST ========================
+  function toast(msg, type) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.className = 'toast ' + (type || '');
+    setTimeout(() => el.classList.add('show'), 10);
+    setTimeout(() => el.classList.remove('show'), 2800);
+  }
+
+  // ======================== MODALS ========================
+  function openModal(id) { document.getElementById(id).classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.active').forEach(el => el.classList.remove('active')); });
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+  });
+
+  // ======================== SUB TABS ========================
+  function switchSubTab(tab, btn) {
+    document.querySelectorAll('#subTabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['asignar','buscar','ubicaciones','recientes','estadisticas'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('hide', t !== tab);
+    });
+    if (tab === 'asignar') renderAssignForm();
+    if (tab === 'buscar') renderSearch();
+    if (tab === 'ubicaciones') renderLocations();
+    if (tab === 'recientes') renderRecent();
+    if (tab === 'estadisticas') renderDetailedStats();
+    renderStats();
+  }
+
+  // ======================== STATS BAR ========================
+  function renderStats() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const assigned = recs.filter(r => r.locationId).length;
+    const now = new Date();
+    const monthStart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    const thisMonth = recs.filter(r => r.locationId && r.documentDate && r.documentDate >= monthStart).length;
+    document.getElementById('stats').innerHTML =
+      '<div class="stat-card"><div class="num">' + assigned + '</div><div class="label">Assignments</div></div>' +
+      '<div class="stat-card green"><div class="num">' + locs.length + '</div><div class="label">Locations</div></div>' +
+      '<div class="stat-card orange"><div class="num">' + thisMonth + '</div><div class="label">This month</div></div>';
+  }
+
+  // ======================== TRAIN HELPERS ========================
+  function getAllTrains() {
+    const recs = getRecs();
+    const used = new Set(recs.map(r => r.train).filter(Boolean));
+    PREDEFINED_TRAINS.forEach(t => used.add(t));
+    return Array.from(used).sort();
+  }
+
+  function populateTrainSuggestions() {
+    const trains = getAllTrains();
+    document.getElementById('trainSuggestions').innerHTML = trains.map(t => '<option value="' + escAttr(t) + '">').join('');
+  }
+
+  // ======================== ASSIGN TAB ========================
+  function renderAssignForm() {
+    const locs = getLocs();
+    const refs = getRefs();
+    document.getElementById('assignTitle').textContent = 'Assign document to cabinet - ' + sys().name;
+
+    if (sys().hasCategories) {
+      let h = '<option value="">Select...</option>';
+      sys().categories.forEach(c => { h += '<option value="' + c + '">' + c + '</option>'; });
+      document.getElementById('asCategory').innerHTML = h;
+      document.getElementById('asCategory').value = '';
+      document.getElementById('asRef').value = '';
+      document.getElementById('refDatalist').innerHTML = '';
+    } else {
+      let h = '';
+      refs.forEach(r => { h += '<option value="' + escAttr(getRefDisplay(r)) + '">'; });
+      document.getElementById('refDatalist').innerHTML = h;
+      document.getElementById('asRef').value = '';
+    }
+
+    let h = '<option value="">Select...</option>';
+    locs.forEach(l => { h += '<option value="' + l.id + '">' + esc(l.name) + '</option>'; });
+    document.getElementById('asLocation').innerHTML = h;
+
+    populateTrainSuggestions();
+  }
+
+  function onCategoryChange() {
+    const cat = document.getElementById('asCategory').value;
+    const refs = getRefs();
+    let h = '';
+    refs.forEach(r => {
+      if (r.category === cat) h += '<option value="' + escAttr(r.name) + '">';
+    });
+    document.getElementById('refDatalist').innerHTML = h;
+    document.getElementById('asRef').value = '';
+  }
+
+  function assignDocument() {
+    const hasTrain = sys().hasTrains !== false;
+    const train = hasTrain ? document.getElementById('asTrain').value.trim().toUpperCase() : '';
+    const cat = document.getElementById('asCategory').value;
+    const ref = document.getElementById('asRef').value;
+    const date = document.getElementById('asDate').value;
+    const locId = document.getElementById('asLocation').value;
+    const notes = document.getElementById('asNotes').value.trim();
+
+    if (hasTrain && !train) { toast('Enter a train number', 'error'); return; }
+    if (sys().hasCategories && !cat) { toast('Select a category', 'error'); return; }
+    if (!ref) { toast('Select a reference', 'error'); return; }
+    if (!date) { toast('Select the document date', 'error'); return; }
+    if (!locId) { toast('Select a cabinet location', 'error'); return; }
+
+    const recs = getRecs();
+    recs.push({
+      id: nextId(recs),
+      train: train,
+      category: sys().hasCategories ? cat : '',
+      ref: ref,
+      name: '',
+      locationId: locId,
+      locationNotes: notes,
+      documentDate: date
+    });
+    setRecs(recs);
+
+    document.getElementById('asTrain').value = '';
+    document.getElementById('asCategory').value = '';
+    document.getElementById('asRef').value = '';
+    document.getElementById('asDate').value = '';
+    document.getElementById('asNotes').value = '';
+    renderStats();
+    toast('Document assigned', 'success');
+  }
+
+  // ======================== FILTERS ========================
+  function populateFilters() {
+    const trains = getAllTrains();
+    const refs = getRefs();
+    const locs = getLocs();
+
+    let h = '<option value="">All trains</option>';
+    trains.forEach(t => { h += '<option value="' + escAttr(t) + '">' + esc(t) + '</option>'; });
+    document.getElementById('trainFilter').innerHTML = h;
+
+    h = '<option value="">All refs</option>';
+    refs.forEach(r => { h += '<option value="' + escAttr(getRefName(r)) + '">' + esc(getRefDisplay(r)) + '</option>'; });
+    document.getElementById('refFilter').innerHTML = h;
+
+    if (sys().hasCategories) {
+      h = '<option value="">All categories</option>';
+      sys().categories.forEach(c => { h += '<option value="' + c + '">' + c + '</option>'; });
+      document.getElementById('catFilter').innerHTML = h;
+      document.getElementById('catFilter').value = '';
+    }
+
+    h = '<option value="">All locations</option>';
+    locs.forEach(l => { h += '<option value="' + l.id + '">' + esc(l.name) + '</option>'; });
+    document.getElementById('locFilter').innerHTML = h;
+  }
+
+  // ======================== SEARCH TAB ========================
+  function renderSearch() {
+    const q = document.getElementById('searchInput').value.toLowerCase().trim();
+    const tf = document.getElementById('trainFilter').value;
+    const rf = document.getElementById('refFilter').value;
+    const cf = document.getElementById('catFilter').value;
+    const lf = document.getElementById('locFilter').value;
+    const dFrom = document.getElementById('dateFrom').value;
+    const dTo = document.getElementById('dateTo').value;
+    let recs = getRecs();
+    const locs = getLocs();
+
+    if (q) recs = recs.filter(r => (r.ref + ' ' + r.train + ' ' + (r.name || '') + ' ' + (r.category || '')).toLowerCase().includes(q));
+    if (tf) recs = recs.filter(r => r.train === tf);
+    if (rf) recs = recs.filter(r => r.ref === rf);
+    if (cf) recs = recs.filter(r => r.category === cf);
+    if (lf) recs = recs.filter(r => r.locationId === lf);
+    if (dFrom) recs = recs.filter(r => r.documentDate && r.documentDate >= dFrom);
+    if (dTo) recs = recs.filter(r => r.documentDate && r.documentDate <= dTo);
+
+    const grid = document.getElementById('searchResults');
+    if (!recs.length) {
+      grid.innerHTML = '<div class="empty-state"><h3>No results</h3><p style="color:#aaa">Try a different search term</p></div>';
+      return;
+    }
+    grid.innerHTML = recs.map(r => {
+      const loc = locs.find(l => l.id === r.locationId);
+      const refLabel = r.category ? r.category + ' - ' + r.ref : r.ref;
+      return '<div class="rec-card">' +
+        '<div class="top"><div class="info"><span class="ref">' + esc(refLabel) + '</span><span class="train">' + esc(r.train) + '</span></div></div>' +
+        '<div class="body"><div class="location"><span class="loc-icon">' + (loc ? '&#128230;' : '&#128204;') + '</span>' +
+        (loc ? '<div><div class="loc-text">' + esc(loc.name) + '</div>' + (r.documentDate ? '<div class="loc-date">' + formatDate(r.documentDate) + '</div>' : '') + (r.locationNotes ? '<div class="loc-hint">' + esc(r.locationNotes) + '</div>' : '') + '</div>' : '<span class="no-loc">Unassigned</span>') +
+        '</div></div>' +
+        '<div class="actions"><button class="btn btn-sm btn-danger" onclick="deleteDoc(' + r.id + ')">Delete</button></div></div>';
+    }).join('');
+  }
+
+  // ======================== LOCATIONS TAB ========================
+  function renderLocations() {
+    const locs = getLocs();
+    const recs = getRecs();
+    const el = document.getElementById('locationView');
+    if (!locs.length) {
+      el.innerHTML = '<div class="empty-state"><h3>No locations defined</h3><p style="color:#aaa">Tap "Locations" to add locations</p></div>';
+      return;
+    }
+    el.innerHTML = locs.map(l => {
+      const items = recs.filter(r => r.locationId === l.id);
+      return '<div class="loc-group">' +
+        '<h3>&#128230; ' + esc(l.name) + ' <span style="font-weight:400;font-size:11px;color:#999;">(' + items.length + ' doc' + (items.length !== 1 ? 's' : '') + ')</span></h3>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:4px">' +
+        (items.length ? items.map(r => '<span class="loc-badge"><strong>' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</strong> ' + esc(r.train) + (r.documentDate ? ' <span class="date-tag">' + formatDate(r.documentDate) + '</span>' : '') + (r.locationNotes ? ' <span style="color:#999">- ' + esc(r.locationNotes) + '</span>' : '') + '</span>').join('') : '<span style="font-size:12px;color:#999;padding:2px 0">Empty</span>') +
+        '</div></div>';
+    }).join('');
+  }
+
+  // ======================== RECENT TAB ========================
+  function renderRecent() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const recent = recs.filter(r => r.locationId).sort((a, b) => b.id - a.id).slice(0, 50);
+    const el = document.getElementById('recentView');
+    if (!recent.length) {
+      el.innerHTML = '<div class="empty-state"><h3>No assignments yet</h3><p style="color:#aaa">Assign documents from the Assign tab</p></div>';
+      return;
+    }
+    el.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px">' + recent.map(r => {
+      const loc = locs.find(l => l.id === r.locationId);
+      return '<div class="rec-card" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px">' +
+        '<div><strong style="color:var(--primary)">' + esc(r.train) + '</strong> <span class="ref" style="font-size:12px;padding:1px 8px">' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</span>' +
+        (r.documentDate ? ' <span style="font-size:12px;color:var(--text-light)">' + formatDate(r.documentDate) + '</span>' : '') + '</div>' +
+        '<div style="text-align:right"><span style="font-size:13px;font-weight:500;color:var(--success)">' + (loc ? esc(loc.name) : '') + '</span>' +
+        (r.locationNotes ? '<br><span style="font-size:11px;color:var(--text-light)">' + esc(r.locationNotes) + '</span>' : '') + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  // ======================== DETAILED STATISTICS ========================
+  function renderDetailedStats() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const assigned = recs.filter(r => r.locationId);
+
+    const byLoc = {};
+    locs.forEach(l => { byLoc[l.id] = { name: l.name, count: 0 }; });
+    assigned.forEach(r => { if (byLoc[r.locationId]) byLoc[r.locationId].count++; });
+
+    const byRef = {};
+    const refs = getRefs();
+    refs.forEach(r => { const key = getRefDisplay(r); byRef[key] = 0; });
+    assigned.forEach(r => { const key = r.category ? r.category + ' - ' + r.ref : r.ref; byRef[key] = (byRef[key] || 0) + 1; });
+
+    const byTrain = {};
+    assigned.forEach(r => { byTrain[r.train] = (byTrain[r.train] || 0) + 1; });
+    const sortedTrains = Object.entries(byTrain).sort((a, b) => b[1] - a[1]);
+
+    const byMonth = {};
+    assigned.forEach(r => { if (r.documentDate) { const m = r.documentDate.slice(0, 7); byMonth[m] = (byMonth[m] || 0) + 1; } });
+    const sortedMonths = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).reverse();
+
+    const now = new Date();
+    const monthStart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    const thisMonth = assigned.filter(r => r.documentDate && r.documentDate >= monthStart).length;
+
+    let html = '';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px">' +
+      '<div class="stat-card"><div class="num">' + assigned.length + '</div><div class="label">' + sys().name + ' assignments</div></div>' +
+      '<div class="stat-card green"><div class="num">' + locs.length + '</div><div class="label">Locations</div></div>' +
+      '<div class="stat-card orange"><div class="num">' + thisMonth + '</div><div class="label">This month</div></div></div>';
+
+    html += '<div class="loc-group"><h3>By location</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    Object.values(byLoc).sort((a, b) => b.count - a.count).forEach(l => {
+      const pct = assigned.length ? Math.round(l.count / assigned.length * 100) : 0;
+      html += '<span class="loc-badge"><strong>' + esc(l.name) + '</strong> ' + l.count + ' <span style="color:#999">(' + pct + '%)</span></span>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="loc-group"><h3>By reference</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    Object.entries(byRef).sort((a, b) => b[1] - a[1]).forEach(([ref, count]) => {
+      const pct = assigned.length ? Math.round(count / assigned.length * 100) : 0;
+      html += '<span class="loc-badge"><strong>' + ref + '</strong> ' + count + ' <span style="color:#999">(' + pct + '%)</span></span>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="loc-group"><h3>Top trains</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    sortedTrains.slice(0, 15).forEach(([train, count]) => { html += '<span class="loc-badge"><strong>' + esc(train) + '</strong> ' + count + '</span>'; });
+    if (sortedTrains.length > 15) html += '<span class="loc-badge" style="color:#999">+' + (sortedTrains.length - 15) + ' more</span>';
+    html += '</div></div>';
+
+    html += '<div class="loc-group"><h3>By month</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    sortedMonths.slice(0, 12).forEach(([m, count]) => {
+      const parts = m.split('-');
+      html += '<span class="loc-badge"><strong>' + parts[1] + '/' + parts[0] + '</strong> ' + count + '</span>';
+    });
+    html += '</div></div>';
+
+    document.getElementById('statsView').innerHTML = html;
+  }
+
+  // ======================== CLEAR FILTERS ========================
+  function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('trainFilter').value = '';
+    document.getElementById('refFilter').value = '';
+    document.getElementById('catFilter').value = '';
+    document.getElementById('locFilter').value = '';
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value = '';
+    renderSearch();
+  }
+
+  // ======================== DELETE ========================
+  function deleteDoc(id) {
+    if (!confirm('Delete this document?')) return;
+    let recs = getRecs();
+    recs = recs.filter(r => r.id !== id);
+    setRecs(recs);
+    refreshAll();
+    toast('Document deleted', 'error');
+  }
+
+  // ======================== IMPORT DOCUMENTS ========================
+  function importDocuments(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {defval: ''});
+        let recs = getRecs();
+        let added = 0;
+        data.forEach(row => {
+          const train = (row.Train || row.train || row.TREN || row.tren || '').toString().trim().toUpperCase();
+          const ref = (row.Reference || row.reference || row.Ref || row.REF || row.ref || '').toString().trim().toUpperCase();
+          const cat = (row.Category || row.category || row.Categoria || row.categoria || '').toString().trim();
+          const dateRaw = row.Date || row.date || row.Fecha || row.fecha || row.DATE || '';
+          const locName = (row.Location || row.location || row.Ubicacion || row.ubicacion || '').toString().trim();
+          const notes = (row.Notes || row.notes || row.Notas || row.notas || '').toString().trim();
+          if (!train || !ref) return;
+          let documentDate = '';
+          if (dateRaw) {
+            if (typeof dateRaw === 'number') {
+              const d = XLSX.SSF.parse_date_code(dateRaw);
+              if (d) documentDate = d.y + '-' + String(d.m).padStart(2, '0') + '-' + String(d.d).padStart(2, '0');
+            } else {
+              const ds = dateRaw.toString().trim();
+              const m = ds.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+              if (m) documentDate = m[1] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[3]).padStart(2, '0');
+            }
+          }
+          let locationId = null;
+          if (locName) {
+            const locs = getLocs();
+            let loc = locs.find(l => l.name.toLowerCase() === locName.toLowerCase());
+            if (!loc) {
+              loc = { id: 'loc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: locName };
+              locs.push(loc);
+              setLocs(locs);
+            }
+            locationId = loc.id;
+          }
+          if (sys().hasCategories && cat) {
+            const curRefs = getRefs();
+            if (!curRefs.find(r => r.category === cat && r.name === ref)) {
+              curRefs.push({ category: cat, name: ref });
+              setRefs(curRefs);
+            }
+          }
+          recs.push({ id: nextId(recs), train, ref, category: sys().hasCategories ? cat : '', name: '', locationId, locationNotes: notes, documentDate });
+          added++;
+        });
+        setRecs(recs);
+        refreshAll();
+        event.target.value = '';
+        toast(added + ' documents imported to ' + sys().name, 'success');
+      } catch (err) { toast('Error: ' + err.message, 'error'); event.target.value = ''; }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ======================== LOCATIONS CONFIG ========================
+  function openConfigModal() {
+    document.getElementById('configModalTitle').textContent = 'Configure Locations - ' + sys().name;
+    renderLocList();
+    openModal('modalConfig');
+  }
+
+  function renderLocList() {
+    const locs = getLocs();
+    const el = document.getElementById('locationList');
+    if (!locs.length) {
+      el.innerHTML = '<p style="font-size:12px;color:#999;padding:10px;text-align:center;border:1px dashed var(--border);border-radius:6px">No locations. Add shelves, drawers, bins...</p>';
+      return;
+    }
+    el.innerHTML = locs.map(l => {
+      const n = getRecs().filter(r => r.locationId === l.id).length;
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:5px;background:#fff">' +
+        '<div><strong>' + esc(l.name) + '</strong> <span style="font-size:11px;color:#999;">(' + n + ' doc' + (n !== 1 ? 's' : '') + ')</span></div>' +
+        '<button class="btn btn-sm btn-danger" onclick="delLoc(\'' + l.id + '\')">Delete</button></div>';
+    }).join('');
+  }
+
+  function addLocation() {
+    const inp = document.getElementById('newLoc');
+    const name = inp.value.trim();
+    if (!name) { toast('Enter a name', 'error'); return; }
+    const locs = getLocs();
+    if (locs.find(l => l.name.toLowerCase() === name.toLowerCase())) { toast('Already exists', 'error'); return; }
+    locs.push({ id: 'loc_' + Date.now(), name });
+    setLocs(locs);
+    inp.value = '';
+    renderLocList();
+    populateFilters();
+    toast('Location added to ' + sys().name, 'success');
+  }
+
+  function delLoc(id) {
+    if (!confirm('Remove location? Assigned documents will lose their location.')) return;
+    let locs = getLocs();
+    locs = locs.filter(l => l.id !== id);
+    setLocs(locs);
+    let recs = getRecs();
+    recs.forEach(r => { if (r.locationId === id) { r.locationId = null; r.locationNotes = ''; } });
+    setRecs(recs);
+    renderLocList();
+    populateFilters();
+    refreshAll();
+    toast('Location removed from ' + sys().name, 'success');
+  }
+
+  function importLocations(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {defval: '', header: 1});
+        let locs = getLocs();
+        let added = 0;
+        data.forEach(row => {
+          const cell = row[0] ? row[0].toString().trim() : '';
+          if (!cell || locs.find(l => l.name.toLowerCase() === cell.toLowerCase())) return;
+          locs.push({ id: 'loc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: cell });
+          added++;
+        });
+        setLocs(locs);
+        renderLocList();
+        populateFilters();
+        refreshAll();
+        event.target.value = '';
+        toast(added + ' locations imported to ' + sys().name, 'success');
+      } catch (err) { toast('Error: ' + err.message, 'error'); event.target.value = ''; }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ======================== REFERENCES MANAGEMENT ========================
+  function openRefsModal() {
+    if (sys().hasFixedRefs) return;
+    document.getElementById('refsModalTitle').textContent = 'Manage References - ' + sys().name;
+    if (sys().hasCategories) {
+      let h = '<option value="">Select...</option>';
+      sys().categories.forEach(c => { h += '<option value="' + c + '">' + c + '</option>'; });
+      document.getElementById('refCat').innerHTML = h;
+      document.getElementById('refCat').value = '';
+    }
+    renderRefsList();
+    openModal('modalRefs');
+  }
+
+  function renderRefsList() {
+    const refs = getRefs();
+    const el = document.getElementById('refsList');
+    if (!refs.length) {
+      el.innerHTML = '<p style="font-size:12px;color:#999;padding:10px;text-align:center;border:1px dashed var(--border);border-radius:6px">No references defined. Add one above or import from Excel.</p>';
+      return;
+    }
+    if (sys().hasCategories) {
+      let html = '';
+      sys().categories.forEach(cat => {
+        const items = refs.filter(r => r.category === cat);
+        if (!items.length) return;
+        html += '<div style="margin-bottom:8px"><strong style="font-size:13px;color:var(--primary)">' + cat + '</strong><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">';
+        items.forEach(r => {
+          html += '<span class="ref-tag">' + esc(r.name) + '<span class="del-ref" onclick="deleteReference(\'' + escAttr(r.name) + '\',\'' + escAttr(r.category) + '\')">&times;</span></span>';
+        });
+        html += '</div></div>';
+      });
+      el.innerHTML = html;
+    } else {
+      el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+        refs.map(r => '<span class="ref-tag">' + esc(r) + '<span class="del-ref" onclick="deleteReference(\'' + escAttr(r) + '\')">&times;</span></span>').join('') + '</div>';
+    }
+  }
+
+  function addReference() {
+    if (sys().hasFixedRefs) return;
+    const inp = document.getElementById('newRef');
+    const name = inp.value.trim().toUpperCase();
+    if (!name) { toast('Enter a reference name', 'error'); return; }
+    const refs = getRefs();
+    if (sys().hasCategories) {
+      const cat = document.getElementById('refCat').value;
+      if (!cat) { toast('Select a category', 'error'); return; }
+      if (refs.find(r => r.category === cat && r.name === name)) { toast('Already exists in this category', 'error'); return; }
+      refs.push({ category: cat, name: name });
+    } else {
+      if (refs.find(r => r.toUpperCase() === name)) { toast('Already exists', 'error'); return; }
+      refs.push(name);
+    }
+    setRefs(refs);
+    inp.value = '';
+    if (sys().key === 'facility_registers') { renderFacilityRefsList(); renderFacilityAssignForm(); facilityPopulateFilters(); }
+    else if (sys().key === 'hmw_registers') { renderHMWRefsList(); renderHMWAssignForm(); hmwPopulateFilters(); }
+    else { renderRefsList(); renderAssignForm(); populateFilters(); }
+    toast('Reference added', 'success');
+  }
+
+  function deleteReference(name, cat) {
+    if (sys().hasFixedRefs) return;
+    if (!confirm('Delete reference "' + (cat ? cat + ' - ' : '') + name + '"?')) return;
+    let refs = getRefs();
+    if (sys().hasCategories) {
+      refs = refs.filter(r => !(r.category === cat && r.name === name));
+    } else {
+      refs = refs.filter(r => r !== name);
+    }
+    setRefs(refs);
+    if (sys().key === 'facility_registers') { renderFacilityRefsList(); renderFacilityAssignForm(); facilityPopulateFilters(); }
+    else if (sys().key === 'hmw_registers') { renderHMWRefsList(); renderHMWAssignForm(); hmwPopulateFilters(); }
+    else { renderRefsList(); renderAssignForm(); populateFilters(); }
+    toast('Reference deleted', 'success');
+  }
+
+  function importReferences(event) {
+    if (sys().hasFixedRefs) return;
+    if (!confirm('Delete reference "' + (cat ? cat + ' - ' : '') + name + '"?')) return;
+    let refs = getRefs();
+    if (sys().hasCategories) {
+      refs = refs.filter(r => !(r.category === cat && r.name === name));
+    } else {
+      refs = refs.filter(r => r !== name);
+    }
+    setRefs(refs);
+    if (sys().key === 'facility_registers') { renderFacilityRefsList(); renderFacilityAssignForm(); facilityPopulateFilters(); }
+    else { renderRefsList(); renderAssignForm(); populateFilters(); }
+    toast('Reference deleted', 'success');
+  }
+
+  function importReferences(event) {
+    if (sys().hasFixedRefs) return;
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {defval: '', header: 1});
+        let refs = getRefs();
+        let added = 0;
+        data.forEach(row => {
+          if (sys().hasCategories) {
+            const cat = row[0] ? row[0].toString().trim() : '';
+            const ref = row[1] ? row[1].toString().trim().toUpperCase() : '';
+            if (!cat || !ref || refs.find(r => r.category === cat && r.name === ref)) return;
+            refs.push({ category: cat, name: ref });
+            added++;
+          } else {
+            const cell = row[0] ? row[0].toString().trim().toUpperCase() : '';
+            if (!cell || refs.find(r => r.toUpperCase() === cell)) return;
+            refs.push(cell);
+            added++;
+          }
+        });
+        setRefs(refs);
+        if (sys().key === 'facility_registers') { renderFacilityRefsList(); renderFacilityAssignForm(); facilityPopulateFilters(); }
+        else if (sys().key === 'hmw_registers') { renderHMWRefsList(); renderHMWAssignForm(); hmwPopulateFilters(); }
+        else { renderRefsList(); renderAssignForm(); populateFilters(); }
+        event.target.value = '';
+        toast(added + ' references imported', 'success');
+      } catch (err) { toast('Error: ' + err.message, 'error'); event.target.value = ''; }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ======================== UTILS ========================
+  function esc(s) {
+    if (!s && s !== 0) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+  function escAttr(s) {
+    if (!s) return '';
+    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
+  }
+
+  function refreshAll() {
+    const hasTrain = sys().hasTrains !== false;
+    document.getElementById('trainFilter').style.display = hasTrain ? '' : 'none';
+    renderStats();
+    renderAssignForm();
+    renderSearch();
+    renderLocations();
+    renderRecent();
+    renderDetailedStats();
+    populateFilters();
+  }
+
+  // ======================== FACILITY REGISTERS ========================
+  function switchFacilitySubTab(tab, btn) {
+    document.querySelectorAll('#facilitySubTabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['asignar','buscar','ubicaciones','recientes','estadisticas'].forEach(t => {
+      document.getElementById('facility-tab-' + t).classList.toggle('hide', t !== tab);
+    });
+    if (tab === 'asignar') renderFacilityAssignForm();
+    if (tab === 'buscar') renderFacilitySearch();
+    if (tab === 'ubicaciones') renderFacilityLocations();
+    if (tab === 'recientes') renderFacilityRecent();
+    if (tab === 'estadisticas') renderFacilityDetailedStats();
+    renderFacilityStats();
+  }
+
+  function renderFacilityStats() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const assigned = recs.filter(r => r.locationId).length;
+    const now = new Date();
+    const monthStart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    const thisMonth = recs.filter(r => r.locationId && r.documentDate && r.documentDate >= monthStart).length;
+    document.getElementById('facilityStats').innerHTML =
+      '<div class="stat-card"><div class="num">' + assigned + '</div><div class="label">Assignments</div></div>' +
+      '<div class="stat-card green"><div class="num">' + locs.length + '</div><div class="label">Locations</div></div>' +
+      '<div class="stat-card orange"><div class="num">' + thisMonth + '</div><div class="label">This month</div></div>';
+  }
+
+  function renderFacilityAssignForm() {
+    const locs = getLocs();
+    const refs = getRefs();
+    document.getElementById('facilityAssignTitle').textContent = 'Assign document to cabinet - Facility Registers';
+
+    let h = '<option value="">Select...</option>';
+    sys().categories.forEach(c => { h += '<option value="' + c + '">' + c + '</option>'; });
+    document.getElementById('facAsCategory').innerHTML = h;
+    document.getElementById('facAsCategory').value = '';
+    document.getElementById('facAsRef').value = '';
+    document.getElementById('facRefDatalist').innerHTML = '';
+
+    h = '<option value="">Select...</option>';
+    locs.forEach(l => { h += '<option value="' + l.id + '">' + esc(l.name) + '</option>'; });
+    document.getElementById('facAsLocation').innerHTML = h;
+  }
+
+  function onFacilityCategoryChange() {
+    const cat = document.getElementById('facAsCategory').value;
+    const refs = getRefs();
+    let h = '';
+    refs.forEach(r => {
+      if (r.category === cat) h += '<option value="' + escAttr(r.name) + '">';
+    });
+    document.getElementById('facRefDatalist').innerHTML = h;
+    document.getElementById('facAsRef').value = '';
+  }
+
+  function facilityAssignDocument() {
+    const cat = document.getElementById('facAsCategory').value;
+    const ref = document.getElementById('facAsRef').value;
+    const date = document.getElementById('facAsDate').value;
+    const locId = document.getElementById('facAsLocation').value;
+    const notes = document.getElementById('facAsNotes').value.trim();
+
+    if (!cat) { toast('Select a category', 'error'); return; }
+    if (!ref) { toast('Select a reference', 'error'); return; }
+    if (!date) { toast('Select the document date', 'error'); return; }
+    if (!locId) { toast('Select a cabinet location', 'error'); return; }
+
+    const recs = getRecs();
+    recs.push({
+      id: nextId(recs),
+      train: '',
+      category: cat,
+      ref: ref,
+      name: '',
+      locationId: locId,
+      locationNotes: notes,
+      documentDate: date
+    });
+    setRecs(recs);
+
+    document.getElementById('facAsCategory').value = '';
+    document.getElementById('facAsRef').value = '';
+    document.getElementById('facAsDate').value = '';
+    document.getElementById('facAsNotes').value = '';
+    renderFacilityStats();
+    toast('Document assigned', 'success');
+  }
+
+  function facilityPopulateFilters() {
+    const refs = getRefs();
+    const locs = getLocs();
+
+    let h = '<option value="">All refs</option>';
+    refs.forEach(r => { h += '<option value="' + escAttr(getRefName(r)) + '">' + esc(getRefDisplay(r)) + '</option>'; });
+    document.getElementById('facRefFilter').innerHTML = h;
+
+    h = '<option value="">All categories</option>';
+    sys().categories.forEach(c => { h += '<option value="' + c + '">' + c + '</option>'; });
+    document.getElementById('facCatFilter').innerHTML = h;
+    document.getElementById('facCatFilter').value = '';
+
+    h = '<option value="">All locations</option>';
+    locs.forEach(l => { h += '<option value="' + l.id + '">' + esc(l.name) + '</option>'; });
+    document.getElementById('facLocFilter').innerHTML = h;
+  }
+
+  function renderFacilitySearch() {
+    const q = document.getElementById('facSearchInput').value.toLowerCase().trim();
+    const rf = document.getElementById('facRefFilter').value;
+    const cf = document.getElementById('facCatFilter').value;
+    const lf = document.getElementById('facLocFilter').value;
+    const dFrom = document.getElementById('facDateFrom').value;
+    const dTo = document.getElementById('facDateTo').value;
+    let recs = getRecs();
+    const locs = getLocs();
+
+    if (q) recs = recs.filter(r => (r.ref + ' ' + (r.name || '') + ' ' + (r.category || '')).toLowerCase().includes(q));
+    if (rf) recs = recs.filter(r => r.ref === rf);
+    if (cf) recs = recs.filter(r => r.category === cf);
+    if (lf) recs = recs.filter(r => r.locationId === lf);
+    if (dFrom) recs = recs.filter(r => r.documentDate && r.documentDate >= dFrom);
+    if (dTo) recs = recs.filter(r => r.documentDate && r.documentDate <= dTo);
+
+    const grid = document.getElementById('facSearchResults');
+    if (!recs.length) {
+      grid.innerHTML = '<div class="empty-state"><h3>No results</h3><p style="color:#aaa">Try a different search term</p></div>';
+      return;
+    }
+    grid.innerHTML = recs.map(r => {
+      const loc = locs.find(l => l.id === r.locationId);
+      const refLabel = r.category ? r.category + ' - ' + r.ref : r.ref;
+      return '<div class="rec-card">' +
+        '<div class="top"><div class="info"><span class="ref">' + esc(refLabel) + '</span></div></div>' +
+        '<div class="body"><div class="location"><span class="loc-icon">' + (loc ? '&#128230;' : '&#128204;') + '</span>' +
+        (loc ? '<div><div class="loc-text">' + esc(loc.name) + '</div>' + (r.documentDate ? '<div class="loc-date">' + formatDate(r.documentDate) + '</div>' : '') + (r.locationNotes ? '<div class="loc-hint">' + esc(r.locationNotes) + '</div>' : '') + '</div>' : '<span class="no-loc">Unassigned</span>') +
+        '</div></div>' +
+        '<div class="actions"><button class="btn btn-sm btn-danger" onclick="facilityDeleteDoc(' + r.id + ')">Delete</button></div></div>';
+    }).join('');
+  }
+
+  function facilityClearFilters() {
+    document.getElementById('facSearchInput').value = '';
+    document.getElementById('facRefFilter').value = '';
+    document.getElementById('facCatFilter').value = '';
+    document.getElementById('facLocFilter').value = '';
+    document.getElementById('facDateFrom').value = '';
+    document.getElementById('facDateTo').value = '';
+    renderFacilitySearch();
+  }
+
+  function facilityDeleteDoc(id) {
+    if (!confirm('Delete this document?')) return;
+    let recs = getRecs();
+    recs = recs.filter(r => r.id !== id);
+    setRecs(recs);
+    renderFacilitySearch();
+    renderFacilityLocations();
+    renderFacilityRecent();
+    renderFacilityDetailedStats();
+    renderFacilityStats();
+    toast('Document deleted', 'error');
+  }
+
+  function renderFacilityLocations() {
+    const locs = getLocs();
+    const recs = getRecs();
+    const el = document.getElementById('facLocationView');
+    if (!locs.length) {
+      el.innerHTML = '<div class="empty-state"><h3>No locations defined</h3><p style="color:#aaa">Tap "Locations" to add locations</p></div>';
+      return;
+    }
+    el.innerHTML = locs.map(l => {
+      const items = recs.filter(r => r.locationId === l.id);
+      return '<div class="loc-group">' +
+        '<h3>&#128230; ' + esc(l.name) + ' <span style="font-weight:400;font-size:11px;color:#999;">(' + items.length + ' doc' + (items.length !== 1 ? 's' : '') + ')</span></h3>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:4px">' +
+        (items.length ? items.map(r => '<span class="loc-badge"><strong>' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</strong>' + (r.documentDate ? ' <span class="date-tag">' + formatDate(r.documentDate) + '</span>' : '') + (r.locationNotes ? ' <span style="color:#999">- ' + esc(r.locationNotes) + '</span>' : '') + '</span>').join('') : '<span style="font-size:12px;color:#999;padding:2px 0">Empty</span>') +
+        '</div></div>';
+    }).join('');
+  }
+
+  function renderFacilityRecent() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const recent = recs.filter(r => r.locationId).sort((a, b) => b.id - a.id).slice(0, 50);
+    const el = document.getElementById('facRecentView');
+    if (!recent.length) {
+      el.innerHTML = '<div class="empty-state"><h3>No assignments yet</h3><p style="color:#aaa">Assign documents from the Assign tab</p></div>';
+      return;
+    }
+    el.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px">' + recent.map(r => {
+      const loc = locs.find(l => l.id === r.locationId);
+      return '<div class="rec-card" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px">' +
+        '<div><span class="ref" style="font-size:12px;padding:1px 8px">' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</span>' +
+        (r.documentDate ? ' <span style="font-size:12px;color:var(--text-light)">' + formatDate(r.documentDate) + '</span>' : '') + '</div>' +
+        '<div style="text-align:right"><span style="font-size:13px;font-weight:500;color:var(--success)">' + (loc ? esc(loc.name) : '') + '</span>' +
+        (r.locationNotes ? '<br><span style="font-size:11px;color:var(--text-light)">' + esc(r.locationNotes) + '</span>' : '') + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  function renderFacilityDetailedStats() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const assigned = recs.filter(r => r.locationId);
+
+    const byLoc = {};
+    locs.forEach(l => { byLoc[l.id] = { name: l.name, count: 0 }; });
+    assigned.forEach(r => { if (byLoc[r.locationId]) byLoc[r.locationId].count++; });
+
+    const byRef = {};
+    const refs = getRefs();
+    refs.forEach(r => { const key = getRefDisplay(r); byRef[key] = 0; });
+    assigned.forEach(r => { const key = r.category ? r.category + ' - ' + r.ref : r.ref; byRef[key] = (byRef[key] || 0) + 1; });
+
+    const byMonth = {};
+    assigned.forEach(r => { if (r.documentDate) { const m = r.documentDate.slice(0, 7); byMonth[m] = (byMonth[m] || 0) + 1; } });
+    const sortedMonths = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).reverse();
+
+    const now = new Date();
+    const monthStart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    const thisMonth = assigned.filter(r => r.documentDate && r.documentDate >= monthStart).length;
+
+    let html = '';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px">' +
+      '<div class="stat-card"><div class="num">' + assigned.length + '</div><div class="label">Facility Registers assignments</div></div>' +
+      '<div class="stat-card green"><div class="num">' + locs.length + '</div><div class="label">Locations</div></div>' +
+      '<div class="stat-card orange"><div class="num">' + thisMonth + '</div><div class="label">This month</div></div></div>';
+
+    html += '<div class="loc-group"><h3>By location</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    Object.values(byLoc).sort((a, b) => b.count - a.count).forEach(l => {
+      const pct = assigned.length ? Math.round(l.count / assigned.length * 100) : 0;
+      html += '<span class="loc-badge"><strong>' + esc(l.name) + '</strong> ' + l.count + ' <span style="color:#999">(' + pct + '%)</span></span>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="loc-group"><h3>By reference</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    Object.entries(byRef).sort((a, b) => b[1] - a[1]).forEach(([ref, count]) => {
+      const pct = assigned.length ? Math.round(count / assigned.length * 100) : 0;
+      html += '<span class="loc-badge"><strong>' + ref + '</strong> ' + count + ' <span style="color:#999">(' + pct + '%)</span></span>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="loc-group"><h3>By month</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    sortedMonths.slice(0, 12).forEach(([m, count]) => {
+      const parts = m.split('-');
+      html += '<span class="loc-badge"><strong>' + parts[1] + '/' + parts[0] + '</strong> ' + count + '</span>';
+    });
+    html += '</div></div>';
+
+    document.getElementById('facStatsView').innerHTML = html;
+  }
+
+  function facilityImportDocuments(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {defval: ''});
+        let recs = getRecs();
+        let added = 0;
+        data.forEach(row => {
+          const ref = (row.Reference || row.reference || row.Ref || row.REF || row.ref || '').toString().trim().toUpperCase();
+          const cat = (row.Category || row.category || row.Categoria || row.categoria || '').toString().trim();
+          const dateRaw = row.Date || row.date || row.Fecha || row.fecha || row.DATE || '';
+          const locName = (row.Location || row.location || row.Ubicacion || row.ubicacion || '').toString().trim();
+          const notes = (row.Notes || row.notes || row.Notas || row.notas || '').toString().trim();
+          if (!ref || !cat) return;
+          let documentDate = '';
+          if (dateRaw) {
+            if (typeof dateRaw === 'number') {
+              const d = XLSX.SSF.parse_date_code(dateRaw);
+              if (d) documentDate = d.y + '-' + String(d.m).padStart(2, '0') + '-' + String(d.d).padStart(2, '0');
+            } else {
+              const ds = dateRaw.toString().trim();
+              const m = ds.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+              if (m) documentDate = m[1] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[3]).padStart(2, '0');
+            }
+          }
+          let locationId = null;
+          if (locName) {
+            const locs = getLocs();
+            let loc = locs.find(l => l.name.toLowerCase() === locName.toLowerCase());
+            if (!loc) {
+              loc = { id: 'loc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: locName };
+              locs.push(loc);
+              setLocs(locs);
+            }
+            locationId = loc.id;
+          }
+          if (cat && ref) {
+            const curRefs = getRefs();
+            if (!curRefs.find(r => r.category === cat && r.name === ref)) {
+              curRefs.push({ category: cat, name: ref });
+              setRefs(curRefs);
+            }
+          }
+          recs.push({ id: nextId(recs), train: '', category: cat, ref, name: '', locationId, locationNotes: notes, documentDate });
+          added++;
+        });
+        setRecs(recs);
+        renderFacilityStats();
+        renderFacilityAssignForm();
+        renderFacilitySearch();
+        renderFacilityLocations();
+        renderFacilityRecent();
+        renderFacilityDetailedStats();
+        facilityPopulateFilters();
+        event.target.value = '';
+        toast(added + ' documents imported to Facility Registers', 'success');
+      } catch (err) { toast('Error: ' + err.message, 'error'); event.target.value = ''; }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function openFacilityRefsModal() {
+    document.getElementById('refsModalTitle').textContent = 'Manage References - Facility Registers';
+    document.getElementById('refCatGroup').style.display = '';
+    let h = '<option value="">Select...</option>';
+    sys().categories.forEach(c => { h += '<option value="' + c + '">' + c + '</option>'; });
+    document.getElementById('refCat').innerHTML = h;
+    document.getElementById('refCat').value = '';
+    renderFacilityRefsList();
+    openModal('modalRefs');
+  }
+
+  function renderFacilityRefsList() {
+    const refs = getRefs();
+    const el = document.getElementById('refsList');
+    if (!refs.length) {
+      el.innerHTML = '<p style="font-size:12px;color:#999;padding:10px;text-align:center;border:1px dashed var(--border);border-radius:6px">No references defined. Add one above or import from Excel.</p>';
+      return;
+    }
+    let html = '';
+    sys().categories.forEach(cat => {
+      const items = refs.filter(r => r.category === cat);
+      if (!items.length) return;
+      html += '<div style="margin-bottom:8px"><strong style="font-size:13px;color:var(--primary)">' + cat + '</strong><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">';
+      items.forEach(r => {
+        html += '<span class="ref-tag">' + esc(r.name) + '<span class="del-ref" onclick="deleteFacilityReference(\'' + escAttr(r.name) + '\',\'' + escAttr(r.category) + '\')">&times;</span></span>';
+      });
+      html += '</div></div>';
+    });
+    el.innerHTML = html;
+  }
+
+  function addFacilityReference() {
+    const inp = document.getElementById('newRef');
+    const name = inp.value.trim().toUpperCase();
+    if (!name) { toast('Enter a reference name', 'error'); return; }
+    const cat = document.getElementById('refCat').value;
+    if (!cat) { toast('Select a category', 'error'); return; }
+    const refs = getRefs();
+    if (refs.find(r => r.category === cat && r.name === name)) { toast('Already exists in this category', 'error'); return; }
+    refs.push({ category: cat, name: name });
+    setRefs(refs);
+    inp.value = '';
+    renderFacilityRefsList();
+    renderFacilityAssignForm();
+    facilityPopulateFilters();
+    toast('Reference added', 'success');
+  }
+
+  function deleteFacilityReference(name, cat) {
+    if (!confirm('Delete reference "' + cat + ' - ' + name + '"?')) return;
+    let refs = getRefs();
+    refs = refs.filter(r => !(r.category === cat && r.name === name));
+    setRefs(refs);
+    renderFacilityRefsList();
+    renderFacilityAssignForm();
+    facilityPopulateFilters();
+    toast('Reference deleted', 'success');
+  }
+
+  function importFacilityReferences(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {defval: '', header: 1});
+        let refs = getRefs();
+        let added = 0;
+        data.forEach(row => {
+          const cat = row[0] ? row[0].toString().trim() : '';
+          const ref = row[1] ? row[1].toString().trim().toUpperCase() : '';
+          if (!cat || !ref || refs.find(r => r.category === cat && r.name === ref)) return;
+          refs.push({ category: cat, name: ref });
+          added++;
+        });
+        setRefs(refs);
+        renderFacilityRefsList();
+        renderFacilityAssignForm();
+        facilityPopulateFilters();
+        event.target.value = '';
+        toast(added + ' references imported', 'success');
+      } catch (err) { toast('Error: ' + err.message, 'error'); event.target.value = ''; }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ======================== HMW REGISTERS ========================
+  function switchHMWSubTab(tab, btn) {
+    document.querySelectorAll('#hmwSubTabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['asignar','buscar','ubicaciones','recientes','estadisticas'].forEach(t => {
+      document.getElementById('hmw-tab-' + t).classList.toggle('hide', t !== tab);
+    });
+    if (tab === 'asignar') renderHMWAssignForm();
+    if (tab === 'buscar') renderHMWSearch();
+    if (tab === 'ubicaciones') renderHMWLocations();
+    if (tab === 'recientes') renderHMWRecent();
+    if (tab === 'estadisticas') renderHMWDetailedStats();
+    renderHMWStats();
+  }
+
+  function renderHMWStats() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const assigned = recs.filter(r => r.locationId).length;
+    const now = new Date();
+    const monthStart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    const thisMonth = recs.filter(r => r.locationId && r.documentDate && r.documentDate >= monthStart).length;
+    document.getElementById('hmwStats').innerHTML =
+      '<div class="stat-card"><div class="num">' + assigned + '</div><div class="label">Assignments</div></div>' +
+      '<div class="stat-card green"><div class="num">' + locs.length + '</div><div class="label">Locations</div></div>' +
+      '<div class="stat-card orange"><div class="num">' + thisMonth + '</div><div class="label">This month</div></div>';
+  }
+
+  function renderHMWAssignForm() {
+    const locs = getLocs();
+    const refs = getRefs();
+    document.getElementById('hmwAssignTitle').textContent = 'Assign document to cabinet - HMW Registers';
+
+    let h = '<option value="">Select...</option>';
+    sys().categories.forEach(c => { h += '<option value="' + c + '">' + c + '</option>'; });
+    document.getElementById('hmwAsCategory').innerHTML = h;
+    document.getElementById('hmwAsCategory').value = '';
+    document.getElementById('hmwAsRef').value = '';
+    document.getElementById('hmwRefDatalist').innerHTML = '';
+
+    h = '<option value="">Select...</option>';
+    locs.forEach(l => { h += '<option value="' + l.id + '">' + esc(l.name) + '</option>'; });
+    document.getElementById('hmwAsLocation').innerHTML = h;
+  }
+
+  function onHMWCategoryChange() {
+    const cat = document.getElementById('hmwAsCategory').value;
+    const refs = getRefs();
+    let h = '';
+    refs.forEach(r => {
+      if (r.category === cat) h += '<option value="' + escAttr(r.name) + '">';
+    });
+    document.getElementById('hmwRefDatalist').innerHTML = h;
+    document.getElementById('hmwAsRef').value = '';
+  }
+
+  function hmwAssignDocument() {
+    const cat = document.getElementById('hmwAsCategory').value;
+    const ref = document.getElementById('hmwAsRef').value;
+    const date = document.getElementById('hmwAsDate').value;
+    const locId = document.getElementById('hmwAsLocation').value;
+    const notes = document.getElementById('hmwAsNotes').value.trim();
+
+    if (!cat) { toast('Select a category', 'error'); return; }
+    if (!ref) { toast('Select a reference', 'error'); return; }
+    if (!date) { toast('Select the document date', 'error'); return; }
+    if (!locId) { toast('Select a cabinet location', 'error'); return; }
+
+    const recs = getRecs();
+    recs.push({
+      id: nextId(recs),
+      train: '',
+      category: cat,
+      ref: ref,
+      name: '',
+      locationId: locId,
+      locationNotes: notes,
+      documentDate: date
+    });
+    setRecs(recs);
+
+    document.getElementById('hmwAsCategory').value = '';
+    document.getElementById('hmwAsRef').value = '';
+    document.getElementById('hmwAsDate').value = '';
+    document.getElementById('hmwAsNotes').value = '';
+    renderHMWStats();
+    toast('Document assigned', 'success');
+  }
+
+  function hmwPopulateFilters() {
+    const refs = getRefs();
+    const locs = getLocs();
+
+    let h = '<option value="">All refs</option>';
+    refs.forEach(r => { h += '<option value="' + escAttr(getRefName(r)) + '">' + esc(getRefDisplay(r)) + '</option>'; });
+    document.getElementById('hmwRefFilter').innerHTML = h;
+
+    h = '<option value="">All categories</option>';
+    sys().categories.forEach(c => { h += '<option value="' + c + '">' + c + '</option>'; });
+    document.getElementById('hmwCatFilter').innerHTML = h;
+    document.getElementById('hmwCatFilter').value = '';
+
+    h = '<option value="">All locations</option>';
+    locs.forEach(l => { h += '<option value="' + l.id + '">' + esc(l.name) + '</option>'; });
+    document.getElementById('hmwLocFilter').innerHTML = h;
+  }
+
+  function renderHMWSearch() {
+    const q = document.getElementById('hmwSearchInput').value.toLowerCase().trim();
+    const rf = document.getElementById('hmwRefFilter').value;
+    const cf = document.getElementById('hmwCatFilter').value;
+    const lf = document.getElementById('hmwLocFilter').value;
+    const dFrom = document.getElementById('hmwDateFrom').value;
+    const dTo = document.getElementById('hmwDateTo').value;
+    let recs = getRecs();
+    const locs = getLocs();
+
+    if (q) recs = recs.filter(r => (r.ref + ' ' + (r.name || '') + ' ' + (r.category || '')).toLowerCase().includes(q));
+    if (rf) recs = recs.filter(r => r.ref === rf);
+    if (cf) recs = recs.filter(r => r.category === cf);
+    if (lf) recs = recs.filter(r => r.locationId === lf);
+    if (dFrom) recs = recs.filter(r => r.documentDate && r.documentDate >= dFrom);
+    if (dTo) recs = recs.filter(r => r.documentDate && r.documentDate <= dTo);
+
+    const grid = document.getElementById('hmwSearchResults');
+    if (!recs.length) {
+      grid.innerHTML = '<div class="empty-state"><h3>No results</h3><p style="color:#aaa">Try a different search term</p></div>';
+      return;
+    }
+    grid.innerHTML = recs.map(r => {
+      const loc = locs.find(l => l.id === r.locationId);
+      const refLabel = r.category ? r.category + ' - ' + r.ref : r.ref;
+      return '<div class="rec-card">' +
+        '<div class="top"><div class="info"><span class="ref">' + esc(refLabel) + '</span></div></div>' +
+        '<div class="body"><div class="location"><span class="loc-icon">' + (loc ? '&#128230;' : '&#128204;') + '</span>' +
+        (loc ? '<div><div class="loc-text">' + esc(loc.name) + '</div>' + (r.documentDate ? '<div class="loc-date">' + formatDate(r.documentDate) + '</div>' : '') + (r.locationNotes ? '<div class="loc-hint">' + esc(r.locationNotes) + '</div>' : '') + '</div>' : '<span class="no-loc">Unassigned</span>') +
+        '</div></div>' +
+        '<div class="actions"><button class="btn btn-sm btn-danger" onclick="hmwDeleteDoc(' + r.id + ')">Delete</button></div></div>';
+    }).join('');
+  }
+
+  function hmwClearFilters() {
+    document.getElementById('hmwSearchInput').value = '';
+    document.getElementById('hmwRefFilter').value = '';
+    document.getElementById('hmwCatFilter').value = '';
+    document.getElementById('hmwLocFilter').value = '';
+    document.getElementById('hmwDateFrom').value = '';
+    document.getElementById('hmwDateTo').value = '';
+    renderHMWSearch();
+  }
+
+  function hmwDeleteDoc(id) {
+    if (!confirm('Delete this document?')) return;
+    let recs = getRecs();
+    recs = recs.filter(r => r.id !== id);
+    setRecs(recs);
+    renderHMWSearch();
+    renderHMWLocations();
+    renderHMWRecent();
+    renderHMWDetailedStats();
+    renderHMWStats();
+    toast('Document deleted', 'error');
+  }
+
+  function renderHMWLocations() {
+    const locs = getLocs();
+    const recs = getRecs();
+    const el = document.getElementById('hmwLocationView');
+    if (!locs.length) {
+      el.innerHTML = '<div class="empty-state"><h3>No locations defined</h3><p style="color:#aaa">Tap "Locations" to add locations</p></div>';
+      return;
+    }
+    el.innerHTML = locs.map(l => {
+      const items = recs.filter(r => r.locationId === l.id);
+      return '<div class="loc-group">' +
+        '<h3>&#128230; ' + esc(l.name) + ' <span style="font-weight:400;font-size:11px;color:#999;">(' + items.length + ' doc' + (items.length !== 1 ? 's' : '') + ')</span></h3>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:4px">' +
+        (items.length ? items.map(r => '<span class="loc-badge"><strong>' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</strong>' + (r.documentDate ? ' <span class="date-tag">' + formatDate(r.documentDate) + '</span>' : '') + (r.locationNotes ? ' <span style="color:#999">- ' + esc(r.locationNotes) + '</span>' : '') + '</span>').join('') : '<span style="font-size:12px;color:#999;padding:2px 0">Empty</span>') +
+        '</div></div>';
+    }).join('');
+  }
+
+  function renderHMWRecent() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const recent = recs.filter(r => r.locationId).sort((a, b) => b.id - a.id).slice(0, 50);
+    const el = document.getElementById('hmwRecentView');
+    if (!recent.length) {
+      el.innerHTML = '<div class="empty-state"><h3>No assignments yet</h3><p style="color:#aaa">Assign documents from the Assign tab</p></div>';
+      return;
+    }
+    el.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px">' + recent.map(r => {
+      const loc = locs.find(l => l.id === r.locationId);
+      return '<div class="rec-card" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px">' +
+        '<div><span class="ref" style="font-size:12px;padding:1px 8px">' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</span>' +
+        (r.documentDate ? ' <span style="font-size:12px;color:var(--text-light)">' + formatDate(r.documentDate) + '</span>' : '') + '</div>' +
+        '<div style="text-align:right"><span style="font-size:13px;font-weight:500;color:var(--success)">' + (loc ? esc(loc.name) : '') + '</span>' +
+        (r.locationNotes ? '<br><span style="font-size:11px;color:var(--text-light)">' + esc(r.locationNotes) + '</span>' : '') + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  function renderHMWDetailedStats() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const assigned = recs.filter(r => r.locationId);
+
+    const byLoc = {};
+    locs.forEach(l => { byLoc[l.id] = { name: l.name, count: 0 }; });
+    assigned.forEach(r => { if (byLoc[r.locationId]) byLoc[r.locationId].count++; });
+
+    const byRef = {};
+    const refs = getRefs();
+    refs.forEach(r => { const key = getRefDisplay(r); byRef[key] = 0; });
+    assigned.forEach(r => { const key = r.category ? r.category + ' - ' + r.ref : r.ref; byRef[key] = (byRef[key] || 0) + 1; });
+
+    const byMonth = {};
+    assigned.forEach(r => { if (r.documentDate) { const m = r.documentDate.slice(0, 7); byMonth[m] = (byMonth[m] || 0) + 1; } });
+    const sortedMonths = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).reverse();
+
+    const now = new Date();
+    const monthStart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    const thisMonth = assigned.filter(r => r.documentDate && r.documentDate >= monthStart).length;
+
+    let html = '';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px">' +
+      '<div class="stat-card"><div class="num">' + assigned.length + '</div><div class="label">HMW Registers assignments</div></div>' +
+      '<div class="stat-card green"><div class="num">' + locs.length + '</div><div class="label">Locations</div></div>' +
+      '<div class="stat-card orange"><div class="num">' + thisMonth + '</div><div class="label">This month</div></div></div>';
+
+    html += '<div class="loc-group"><h3>By location</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    Object.values(byLoc).sort((a, b) => b.count - a.count).forEach(l => {
+      const pct = assigned.length ? Math.round(l.count / assigned.length * 100) : 0;
+      html += '<span class="loc-badge"><strong>' + esc(l.name) + '</strong> ' + l.count + ' <span style="color:#999">(' + pct + '%)</span></span>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="loc-group"><h3>By reference</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    Object.entries(byRef).sort((a, b) => b[1] - a[1]).forEach(([ref, count]) => {
+      const pct = assigned.length ? Math.round(count / assigned.length * 100) : 0;
+      html += '<span class="loc-badge"><strong>' + ref + '</strong> ' + count + ' <span style="color:#999">(' + pct + '%)</span></span>';
+    });
+    html += '</div></div>';
+
+    html += '<div class="loc-group"><h3>By month</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
+    sortedMonths.slice(0, 12).forEach(([m, count]) => {
+      const parts = m.split('-');
+      html += '<span class="loc-badge"><strong>' + parts[1] + '/' + parts[0] + '</strong> ' + count + '</span>';
+    });
+    html += '</div></div>';
+
+    document.getElementById('hmwStatsView').innerHTML = html;
+  }
+
+  function hmwImportDocuments(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {defval: ''});
+        let recs = getRecs();
+        let added = 0;
+        data.forEach(row => {
+          const ref = (row.Reference || row.reference || row.Ref || row.REF || row.ref || '').toString().trim().toUpperCase();
+          const cat = (row.Category || row.category || row.Categoria || row.categoria || '').toString().trim();
+          const dateRaw = row.Date || row.date || row.Fecha || row.fecha || row.DATE || '';
+          const locName = (row.Location || row.location || row.Ubicacion || row.ubicacion || '').toString().trim();
+          const notes = (row.Notes || row.notes || row.Notas || row.notas || '').toString().trim();
+          if (!ref || !cat) return;
+          let documentDate = '';
+          if (dateRaw) {
+            if (typeof dateRaw === 'number') {
+              const d = XLSX.SSF.parse_date_code(dateRaw);
+              if (d) documentDate = d.y + '-' + String(d.m).padStart(2, '0') + '-' + String(d.d).padStart(2, '0');
+            } else {
+              const ds = dateRaw.toString().trim();
+              const m = ds.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+              if (m) documentDate = m[1] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[3]).padStart(2, '0');
+            }
+          }
+          let locationId = null;
+          if (locName) {
+            const locs = getLocs();
+            let loc = locs.find(l => l.name.toLowerCase() === locName.toLowerCase());
+            if (!loc) {
+              loc = { id: 'loc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name: locName };
+              locs.push(loc);
+              setLocs(locs);
+            }
+            locationId = loc.id;
+          }
+          if (cat && ref) {
+            const curRefs = getRefs();
+            if (!curRefs.find(r => r.category === cat && r.name === ref)) {
+              curRefs.push({ category: cat, name: ref });
+              setRefs(curRefs);
+            }
+          }
+          recs.push({ id: nextId(recs), train: '', category: cat, ref, name: '', locationId, locationNotes: notes, documentDate });
+          added++;
+        });
+        setRecs(recs);
+        renderHMWStats();
+        renderHMWAssignForm();
+        renderHMWSearch();
+        renderHMWLocations();
+        renderHMWRecent();
+        renderHMWDetailedStats();
+        hmwPopulateFilters();
+        event.target.value = '';
+        toast(added + ' documents imported to HMW Registers', 'success');
+      } catch (err) { toast('Error: ' + err.message, 'error'); event.target.value = ''; }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function openHMWRefsModal() {
+    document.getElementById('refsModalTitle').textContent = 'Manage References - HMW Registers';
+    document.getElementById('refCatGroup').style.display = '';
+    let h = '<option value="">Select...</option>';
+    sys().categories.forEach(c => { h += '<option value="' + c + '">' + c + '</option>'; });
+    document.getElementById('refCat').innerHTML = h;
+    document.getElementById('refCat').value = '';
+    renderHMWRefsList();
+    openModal('modalRefs');
+  }
+
+  function renderHMWRefsList() {
+    const refs = getRefs();
+    const el = document.getElementById('refsList');
+    if (!refs.length) {
+      el.innerHTML = '<p style="font-size:12px;color:#999;padding:10px;text-align:center;border:1px dashed var(--border);border-radius:6px">No references defined. Add one above or import from Excel.</p>';
+      return;
+    }
+    let html = '';
+    sys().categories.forEach(cat => {
+      const items = refs.filter(r => r.category === cat);
+      if (!items.length) return;
+      html += '<div style="margin-bottom:8px"><strong style="font-size:13px;color:var(--primary)">' + cat + '</strong><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">';
+      items.forEach(r => {
+        html += '<span class="ref-tag">' + esc(r.name) + '<span class="del-ref" onclick="deleteHMWReference(\'' + escAttr(r.name) + '\',\'' + escAttr(r.category) + '\')">&times;</span></span>';
+      });
+      html += '</div></div>';
+    });
+    el.innerHTML = html;
+  }
+
+  function addHMWReference() {
+    const inp = document.getElementById('newRef');
+    const name = inp.value.trim().toUpperCase();
+    if (!name) { toast('Enter a reference name', 'error'); return; }
+    const cat = document.getElementById('refCat').value;
+    if (!cat) { toast('Select a category', 'error'); return; }
+    const refs = getRefs();
+    if (refs.find(r => r.category === cat && r.name === name)) { toast('Already exists in this category', 'error'); return; }
+    refs.push({ category: cat, name: name });
+    setRefs(refs);
+    inp.value = '';
+    renderHMWRefsList();
+    renderHMWAssignForm();
+    hmwPopulateFilters();
+    toast('Reference added', 'success');
+  }
+
+  function deleteHMWReference(name, cat) {
+    if (!confirm('Delete reference "' + cat + ' - ' + name + '"?')) return;
+    let refs = getRefs();
+    refs = refs.filter(r => !(r.category === cat && r.name === name));
+    setRefs(refs);
+    renderHMWRefsList();
+    renderHMWAssignForm();
+    hmwPopulateFilters();
+    toast('Reference deleted', 'success');
+  }
+
+  function importHMWReferences(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(e.target.result, {type: 'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws, {defval: '', header: 1});
+        let refs = getRefs();
+        let added = 0;
+        data.forEach(row => {
+          const cat = row[0] ? row[0].toString().trim() : '';
+          const ref = row[1] ? row[1].toString().trim().toUpperCase() : '';
+          if (!cat || !ref || refs.find(r => r.category === cat && r.name === ref)) return;
+          refs.push({ category: cat, name: ref });
+          added++;
+        });
+        setRefs(refs);
+        renderHMWRefsList();
+        renderHMWAssignForm();
+        hmwPopulateFilters();
+        event.target.value = '';
+        toast(added + ' references imported', 'success');
+      } catch (err) { toast('Error: ' + err.message, 'error'); event.target.value = ''; }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ======================== NAVIGATION ========================
+  function goHome() {
+    document.getElementById('homeSection').classList.remove('hide');
+    document.getElementById('qmwSection').classList.add('hide');
+    document.getElementById('facilitySection').classList.add('hide');
+    document.getElementById('hmwSection').classList.add('hide');
+    document.getElementById('btnHome').style.display = 'none';
+  }
+
+  function goQMW() {
+    currentSystem = 'interventions';
+    document.getElementById('homeSection').classList.add('hide');
+    document.getElementById('qmwSection').classList.remove('hide');
+    document.getElementById('facilitySection').classList.add('hide');
+    document.getElementById('hmwSection').classList.add('hide');
+    document.getElementById('btnHome').style.display = '';
+    document.getElementById('asTrainGroup').style.display = '';
+    document.getElementById('asCategoryGroup').style.display = 'none';
+    document.getElementById('refCatGroup').style.display = 'none';
+    document.getElementById('catFilter').style.display = 'none';
+    document.getElementById('btnManageRefs').style.display = 'none';
+    document.getElementById('refLabel').textContent = 'Intervention type';
+    refreshAll();
+  }
+
+  function goFacility() {
+    currentSystem = 'facility_registers';
+    document.getElementById('homeSection').classList.add('hide');
+    document.getElementById('qmwSection').classList.add('hide');
+    document.getElementById('facilitySection').classList.remove('hide');
+    document.getElementById('hmwSection').classList.add('hide');
+    document.getElementById('btnHome').style.display = '';
+    renderFacilityStats();
+    renderFacilityAssignForm();
+    renderFacilitySearch();
+    renderFacilityLocations();
+    renderFacilityRecent();
+    renderFacilityDetailedStats();
+    facilityPopulateFilters();
+  }
+
+  function goHMW() {
+    currentSystem = 'hmw_registers';
+    document.getElementById('homeSection').classList.add('hide');
+    document.getElementById('qmwSection').classList.add('hide');
+    document.getElementById('facilitySection').classList.add('hide');
+    document.getElementById('hmwSection').classList.remove('hide');
+    document.getElementById('btnHome').style.display = '';
+    renderHMWStats();
+    renderHMWAssignForm();
+    renderHMWSearch();
+    renderHMWLocations();
+    renderHMWRecent();
+    renderHMWDetailedStats();
+    hmwPopulateFilters();
+  }
+
+  // ======================== LOGIN (Supabase Auth) ========================
+  async function checkSession() {
+    const token = localStorage.getItem('supabase_token');
+    const email = localStorage.getItem('supabase_email');
+    if (token && email) {
+      supabaseToken = token;
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('btnLogout').style.display = '';
+      await loadAllData();
+      document.getElementById('btnHome').style.display = '';
+      goHome();
+    }
+  }
+
+  async function tryLogin() {
+    const user = document.getElementById('loginUser').value.trim();
+    const pass = document.getElementById('loginPass').value.trim();
+    const err = document.getElementById('loginError');
+    if (!user || !pass) { err.textContent = 'Enter username and password'; return; }
+
+    const email = user.toLowerCase() + '@pca-system.com';
+    document.getElementById('loginPass').value = '';
+
+    try {
+      const res = await fetch(AUTH_URL + '/token?grant_type=password', {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        supabaseToken = data.access_token;
+        localStorage.setItem('supabase_token', data.access_token);
+        localStorage.setItem('supabase_email', email);
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('btnLogout').style.display = '';
+        await loadAllData();
+        document.getElementById('btnHome').style.display = '';
+        goHome();
+      } else if (data.error_description === 'Invalid login credentials' || data.error === 'invalid_grant') {
+        // Try signing up
+        const signupRes = await fetch(AUTH_URL + '/signup', {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: pass })
+        });
+        const signupData = await signupRes.json();
+        if (signupRes.ok) {
+          if (signupData.access_token) {
+            supabaseToken = signupData.access_token;
+            localStorage.setItem('supabase_token', signupData.access_token);
+            localStorage.setItem('supabase_email', email);
+            document.getElementById('loginOverlay').style.display = 'none';
+            document.getElementById('btnLogout').style.display = '';
+            await loadAllData();
+            document.getElementById('btnHome').style.display = '';
+            goHome();
+          } else {
+            err.textContent = 'Check your email for confirmation link (or disable email confirm in Supabase Auth settings)';
+          }
+        } else {
+          err.textContent = 'Signup error: ' + (signupData.msg || signupData.error_description || 'Unknown error');
+        }
+      } else {
+        err.textContent = 'Error: ' + (data.error_description || data.error || 'Unknown error');
+      }
+    } catch (e) {
+      err.textContent = 'Connection error: ' + e.message;
+    }
+  }
+
+  function logout() {
+    supabaseToken = null;
+    localStorage.removeItem('supabase_token');
+    localStorage.removeItem('supabase_email');
+    document.getElementById('btnLogout').style.display = 'none';
+    document.getElementById('btnHome').style.display = 'none';
+    document.getElementById('loginOverlay').style.display = 'flex';
+    document.getElementById('loginError').textContent = '';
+  }
+
+  // ======================== INIT ========================
+  document.getElementById('btnManageRefs').style.display = 'none';
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('btnLogout').style.display = 'none';
+  document.getElementById('btnHome').style.display = 'none';
+  checkSession();
+</script>
+</body>
+</html>
