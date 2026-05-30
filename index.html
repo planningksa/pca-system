@@ -2314,14 +2314,17 @@
 
     const email = user.toLowerCase() + '@pca-system.com';
     document.getElementById('loginPass').value = '';
+    err.textContent = 'Connecting...';
 
     try {
+      // Primero intentar iniciar sesión
       const res = await fetch(AUTH_URL + '/token?grant_type=password', {
         method: 'POST',
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pass })
       });
       const data = await res.json();
+
       if (res.ok) {
         supabaseToken = data.access_token;
         localStorage.setItem('supabase_token', data.access_token);
@@ -2331,35 +2334,42 @@
         await loadAllData();
         document.getElementById('btnHome').style.display = '';
         goHome();
-      } else if (data.error_description === 'Invalid login credentials' || data.error === 'invalid_grant') {
-        // Try signing up
+        return;
+      }
+
+      // Si falló, mostrar error y opción de registrarse
+      const errMsg = data.error_description || data.error || data.msg || 'Login failed';
+      console.log('Login error:', data);
+      err.textContent = errMsg + '. Try signing up first?';
+
+      // Preguntar si quiere registrarse
+      if (confirm('User not found. Create new account "' + user + '"?')) {
+        err.textContent = 'Creating account...';
         const signupRes = await fetch(AUTH_URL + '/signup', {
           method: 'POST',
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password: pass })
         });
         const signupData = await signupRes.json();
-        if (signupRes.ok) {
-          if (signupData.access_token) {
-            supabaseToken = signupData.access_token;
-            localStorage.setItem('supabase_token', signupData.access_token);
-            localStorage.setItem('supabase_email', email);
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('btnLogout').style.display = '';
-            await loadAllData();
-            document.getElementById('btnHome').style.display = '';
-            goHome();
-          } else {
-            err.textContent = 'Check your email for confirmation link (or disable email confirm in Supabase Auth settings)';
-          }
+
+        if (signupRes.ok && signupData.access_token) {
+          supabaseToken = signupData.access_token;
+          localStorage.setItem('supabase_token', signupData.access_token);
+          localStorage.setItem('supabase_email', email);
+          document.getElementById('loginOverlay').style.display = 'none';
+          document.getElementById('btnLogout').style.display = '';
+          await loadAllData();
+          document.getElementById('btnHome').style.display = '';
+          goHome();
+        } else if (signupRes.ok && !signupData.access_token) {
+          err.textContent = 'Check your email for confirmation link. OR disable email confirm in Supabase: Authentication > Settings > Confirm email = OFF';
         } else {
-          err.textContent = 'Signup error: ' + (signupData.msg || signupData.error_description || 'Unknown error');
+          err.textContent = 'Signup error: ' + (signupData.msg || signupData.error_description || JSON.stringify(signupData));
         }
-      } else {
-        err.textContent = 'Error: ' + (data.error_description || data.error || 'Unknown error');
       }
     } catch (e) {
       err.textContent = 'Connection error: ' + e.message;
+      console.error('Login exception:', e);
     }
   }
 
