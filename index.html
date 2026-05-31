@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>PCA - Document Cabinet</title>
+<link rel="icon" type="image/png" href="mi-logo.png">
+<link rel="apple-touch-icon" href="mi-logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a3a5c">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   :root {
@@ -170,7 +176,7 @@
 
 <div class="login-overlay" id="loginOverlay">
   <div class="login-box">
-    <div class="lock">&#128274;</div>
+    <img src="mi-logo.png" alt="PCA Logo" style="width:100px;height:auto;margin-bottom:10px">
     <h1>Planning and Control<br>Documents System</h1>
     <p class="sub">Sign in to continue</p>
     <div class="form-group">
@@ -241,8 +247,7 @@
       <button class="active" onclick="switchSubTab('asignar',this)">Assign</button>
       <button onclick="switchSubTab('buscar',this)">Search</button>
       <button onclick="switchSubTab('ubicaciones',this)">Locations</button>
-      <button onclick="switchSubTab('recientes',this)">Recent</button>
-      <button onclick="switchSubTab('estadisticas',this)">Statistics</button>
+      <button onclick="switchSubTab('recogidas',this)">Pickups</button>
     </div>
 
     <div id="tab-asignar">
@@ -323,12 +328,8 @@
       <div id="locationView"></div>
     </div>
 
-    <div id="tab-recientes" class="hide">
-      <div id="recentView"></div>
-    </div>
-
-    <div id="tab-estadisticas" class="hide">
-      <div id="statsView"></div>
+    <div id="tab-recogidas" class="hide">
+      <div id="pickupsView"></div>
     </div>
   </div>
 
@@ -344,8 +345,7 @@
       <button class="active" onclick="switchFacilitySubTab('asignar',this)">Assign</button>
       <button onclick="switchFacilitySubTab('buscar',this)">Search</button>
       <button onclick="switchFacilitySubTab('ubicaciones',this)">Locations</button>
-      <button onclick="switchFacilitySubTab('recientes',this)">Recent</button>
-      <button onclick="switchFacilitySubTab('estadisticas',this)">Statistics</button>
+      <button onclick="switchFacilitySubTab('recogidas',this)">Pickups</button>
     </div>
 
     <div id="facility-tab-asignar">
@@ -418,12 +418,8 @@
       <div id="facLocationView"></div>
     </div>
 
-    <div id="facility-tab-recientes" class="hide">
-      <div id="facRecentView"></div>
-    </div>
-
-    <div id="facility-tab-estadisticas" class="hide">
-      <div id="facStatsView"></div>
+    <div id="facility-tab-recogidas" class="hide">
+      <div id="facPickupsView"></div>
     </div>
   </div>
 
@@ -439,8 +435,7 @@
       <button class="active" onclick="switchHMWSubTab('asignar',this)">Assign</button>
       <button onclick="switchHMWSubTab('buscar',this)">Search</button>
       <button onclick="switchHMWSubTab('ubicaciones',this)">Locations</button>
-      <button onclick="switchHMWSubTab('recientes',this)">Recent</button>
-      <button onclick="switchHMWSubTab('estadisticas',this)">Statistics</button>
+      <button onclick="switchHMWSubTab('recogidas',this)">Pickups</button>
     </div>
 
     <div id="hmw-tab-asignar">
@@ -513,12 +508,8 @@
       <div id="hmwLocationView"></div>
     </div>
 
-    <div id="hmw-tab-recientes" class="hide">
-      <div id="hmwRecentView"></div>
-    </div>
-
-    <div id="hmw-tab-estadisticas" class="hide">
-      <div id="hmwStatsView"></div>
+    <div id="hmw-tab-recogidas" class="hide">
+      <div id="hmwPickupsView"></div>
     </div>
   </div>
 
@@ -542,6 +533,45 @@
     <div id="locationList" style="margin-top:6px"></div>
     <div class="form-actions">
       <button class="btn btn-outline" onclick="closeModal('modalConfig')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalEdit">
+  <div class="modal">
+    <h2>Edit Document</h2>
+    <div class="form-group">
+      <label class="field-required">Document date</label>
+      <input type="date" id="editDate">
+    </div>
+    <div class="form-group">
+      <label class="field-required">Cabinet location</label>
+      <select id="editLocation"><option value="">Select...</option></select>
+    </div>
+    <input type="hidden" id="editDocId">
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalEdit')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalPickup">
+  <div class="modal">
+    <h2>Pick up document</h2>
+    <p style="font-size:12px;color:#666;margin-bottom:10px">Enter the employee details who is taking this document</p>
+    <div class="form-group">
+      <label class="field-required">Employee name</label>
+      <input type="text" id="pickupName" value="Hicham El Khamlichi">
+    </div>
+    <div class="form-group">
+      <label class="field-required">Employee ID</label>
+      <input type="text" id="pickupId" value="15198">
+    </div>
+    <input type="hidden" id="pickupDocId">
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalPickup')">Cancel</button>
+      <button class="btn btn-success" onclick="confirmPickup()">Confirm Pickup</button>
     </div>
   </div>
 </div>
@@ -826,14 +856,13 @@
   function switchSubTab(tab, btn) {
     document.querySelectorAll('#subTabs button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['asignar','buscar','ubicaciones','recientes','estadisticas'].forEach(t => {
+    ['asignar','buscar','ubicaciones','recogidas'].forEach(t => {
       document.getElementById('tab-' + t).classList.toggle('hide', t !== tab);
     });
     if (tab === 'asignar') renderAssignForm();
     if (tab === 'buscar') renderSearch();
     if (tab === 'ubicaciones') renderLocations();
-    if (tab === 'recientes') renderRecent();
-    if (tab === 'estadisticas') renderDetailedStats();
+    if (tab === 'recogidas') renderPickups();
     renderStats();
   }
 
@@ -936,6 +965,8 @@
     document.getElementById('asDate').value = '';
     document.getElementById('asNotes').value = '';
     renderStats();
+    renderSearch();
+    renderLocations();
     toast('Document assigned', 'success');
   }
 
@@ -993,12 +1024,17 @@
     grid.innerHTML = recs.map(r => {
       const loc = locs.find(l => l.id === r.locationId);
       const refLabel = r.category ? r.category + ' - ' + r.ref : r.ref;
-      return '<div class="rec-card">' +
+      const isPicked = r.pickupDate && !r.returned;
+      return '<div class="rec-card' + (isPicked ? '" style="opacity:0.5' : '') + '">' +
         '<div class="top"><div class="info"><span class="ref">' + esc(refLabel) + '</span><span class="train">' + esc(r.train) + '</span></div></div>' +
         '<div class="body"><div class="location"><span class="loc-icon">' + (loc ? '&#128230;' : '&#128204;') + '</span>' +
         (loc ? '<div><div class="loc-text">' + esc(loc.name) + '</div>' + (r.documentDate ? '<div class="loc-date">' + formatDate(r.documentDate) + '</div>' : '') + (r.locationNotes ? '<div class="loc-hint">' + esc(r.locationNotes) + '</div>' : '') + '</div>' : '<span class="no-loc">Unassigned</span>') +
+        (isPicked ? '<div style="font-size:11px;color:var(--accent);margin-top:4px">&#128666; Picked up by ' + esc(r.pickupEmployeeName) + '</div>' : '') +
         '</div></div>' +
-        '<div class="actions"><button class="btn btn-sm btn-danger" onclick="deleteDoc(' + r.id + ')">Delete</button></div></div>';
+        '<div class="actions">' +
+        '<button class="btn btn-sm btn-warning" onclick="window.editDoc(' + r.id + ')">Edit</button>' +
+        (isPicked ? '' : '<button class="btn btn-sm btn-success" onclick="window.pickupDoc(' + r.id + ')">&#128666; Pick up</button>') +
+        '<button class="btn btn-sm btn-danger" onclick="window.deleteDoc(' + r.id + ')">Delete</button></div></div>';
     }).join('');
   }
 
@@ -1021,86 +1057,101 @@
     }).join('');
   }
 
-  // ======================== RECENT TAB ========================
-  function renderRecent() {
+  // ======================== PICKUPS TAB ========================
+  function renderPickups() {
     const recs = getRecs();
     const locs = getLocs();
-    const recent = recs.filter(r => r.locationId).sort((a, b) => b.id - a.id).slice(0, 50);
-    const el = document.getElementById('recentView');
-    if (!recent.length) {
-      el.innerHTML = '<div class="empty-state"><h3>No assignments yet</h3><p style="color:#aaa">Assign documents from the Assign tab</p></div>';
+    const picked = recs.filter(r => r.pickupDate && !r.returned);
+    const el = document.getElementById('pickupsView');
+    if (!picked.length) {
+      el.innerHTML = '<div class="empty-state"><h3>No documents picked up</h3><p style="color:#aaa">Use the Search tab to pick up documents</p></div>';
       return;
     }
-    el.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px">' + recent.map(r => {
+    el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px">' + picked.map(r => {
       const loc = locs.find(l => l.id === r.locationId);
-      return '<div class="rec-card" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px">' +
-        '<div><strong style="color:var(--primary)">' + esc(r.train) + '</strong> <span class="ref" style="font-size:12px;padding:1px 8px">' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</span>' +
-        (r.documentDate ? ' <span style="font-size:12px;color:var(--text-light)">' + formatDate(r.documentDate) + '</span>' : '') + '</div>' +
-        '<div style="text-align:right"><span style="font-size:13px;font-weight:500;color:var(--success)">' + (loc ? esc(loc.name) : '') + '</span>' +
-        (r.locationNotes ? '<br><span style="font-size:11px;color:var(--text-light)">' + esc(r.locationNotes) + '</span>' : '') + '</div></div>';
+      const refLabel = r.category ? r.category + ' - ' + r.ref : r.ref;
+      return '<div class="rec-card" style="border-left:4px solid var(--accent)">' +
+        '<div class="top"><div class="info"><span class="ref">' + esc(refLabel) + '</span><span class="train">' + esc(r.train) + '</span></div></div>' +
+        '<div class="body">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 0;font-size:13px">' +
+        '<div><span style="color:var(--text-light)">Employee:</span><br><strong>' + esc(r.pickupEmployeeName) + '</strong></div>' +
+        '<div><span style="color:var(--text-light)">ID:</span><br><strong>' + esc(r.pickupEmployeeId) + '</strong></div>' +
+        '<div><span style="color:var(--text-light)">Pickup date:</span><br><strong>' + formatDate(r.pickupDate) + '</strong></div>' +
+        '<div><span style="color:var(--text-light)">Location:</span><br><strong>' + (loc ? esc(loc.name) : '-') + '</strong></div>' +
+        '</div>' +
+        '</div>' +
+        '<div class="actions"><button class="btn btn-sm btn-success" onclick="returnDoc(' + r.id + ')">&#128259; Return</button></div></div>';
     }).join('') + '</div>';
   }
 
-  // ======================== DETAILED STATISTICS ========================
-  function renderDetailedStats() {
+  // ======================== EDIT DOCUMENT ========================
+  function editDoc(id) {
     const recs = getRecs();
+    const r = recs.find(r => r.id === id);
+    if (!r) return;
+    document.getElementById('editDocId').value = id;
+    document.getElementById('editDate').value = r.documentDate || '';
     const locs = getLocs();
-    const assigned = recs.filter(r => r.locationId);
+    let h = '<option value="">Select...</option>';
+    locs.forEach(l => { h += '<option value="' + l.id + '">' + esc(l.name) + '</option>'; });
+    document.getElementById('editLocation').innerHTML = h;
+    document.getElementById('editLocation').value = r.locationId || '';
+    openModal('modalEdit');
+  }
 
-    const byLoc = {};
-    locs.forEach(l => { byLoc[l.id] = { name: l.name, count: 0 }; });
-    assigned.forEach(r => { if (byLoc[r.locationId]) byLoc[r.locationId].count++; });
+  function saveEdit() {
+    const id = parseInt(document.getElementById('editDocId').value);
+    const date = document.getElementById('editDate').value;
+    const locId = document.getElementById('editLocation').value;
+    if (!date) { toast('Select a date', 'error'); return; }
+    if (!locId) { toast('Select a location', 'error'); return; }
+    let recs = getRecs();
+    const r = recs.find(r => r.id === id);
+    if (!r) return;
+    r.documentDate = date;
+    r.locationId = locId;
+    setRecs(recs);
+    closeModal('modalEdit');
+    refreshAll();
+    toast('Document updated', 'success');
+  }
 
-    const byRef = {};
-    const refs = getRefs();
-    refs.forEach(r => { const key = getRefDisplay(r); byRef[key] = 0; });
-    assigned.forEach(r => { const key = r.category ? r.category + ' - ' + r.ref : r.ref; byRef[key] = (byRef[key] || 0) + 1; });
+  // ======================== PICKUP / RETURN ========================
+  function pickupDoc(id) {
+    document.getElementById('pickupDocId').value = id;
+    document.getElementById('pickupName').value = '';
+    document.getElementById('pickupId').value = '';
+    openModal('modalPickup');
+  }
 
-    const byTrain = {};
-    assigned.forEach(r => { byTrain[r.train] = (byTrain[r.train] || 0) + 1; });
-    const sortedTrains = Object.entries(byTrain).sort((a, b) => b[1] - a[1]);
+  function confirmPickup() {
+    const id = parseInt(document.getElementById('pickupDocId').value);
+    const name = document.getElementById('pickupName').value.trim();
+    const empId = document.getElementById('pickupId').value.trim();
+    if (!name) { toast('Enter employee name', 'error'); return; }
+    if (!empId) { toast('Enter employee ID', 'error'); return; }
+    let recs = getRecs();
+    const r = recs.find(r => r.id === id);
+    if (!r) return;
+    r.pickupEmployeeName = name;
+    r.pickupEmployeeId = empId;
+    r.pickupDate = new Date().toISOString().slice(0, 10);
+    r.returned = false;
+    setRecs(recs);
+    closeModal('modalPickup');
+    refreshAll();
+    toast('Document picked up by ' + name, 'success');
+  }
 
-    const byMonth = {};
-    assigned.forEach(r => { if (r.documentDate) { const m = r.documentDate.slice(0, 7); byMonth[m] = (byMonth[m] || 0) + 1; } });
-    const sortedMonths = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).reverse();
-
-    const now = new Date();
-    const monthStart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
-    const thisMonth = assigned.filter(r => r.documentDate && r.documentDate >= monthStart).length;
-
-    let html = '';
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px">' +
-      '<div class="stat-card"><div class="num">' + assigned.length + '</div><div class="label">' + sys().name + ' assignments</div></div>' +
-      '<div class="stat-card green"><div class="num">' + locs.length + '</div><div class="label">Locations</div></div>' +
-      '<div class="stat-card orange"><div class="num">' + thisMonth + '</div><div class="label">This month</div></div></div>';
-
-    html += '<div class="loc-group"><h3>By location</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
-    Object.values(byLoc).sort((a, b) => b.count - a.count).forEach(l => {
-      const pct = assigned.length ? Math.round(l.count / assigned.length * 100) : 0;
-      html += '<span class="loc-badge"><strong>' + esc(l.name) + '</strong> ' + l.count + ' <span style="color:#999">(' + pct + '%)</span></span>';
-    });
-    html += '</div></div>';
-
-    html += '<div class="loc-group"><h3>By reference</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
-    Object.entries(byRef).sort((a, b) => b[1] - a[1]).forEach(([ref, count]) => {
-      const pct = assigned.length ? Math.round(count / assigned.length * 100) : 0;
-      html += '<span class="loc-badge"><strong>' + ref + '</strong> ' + count + ' <span style="color:#999">(' + pct + '%)</span></span>';
-    });
-    html += '</div></div>';
-
-    html += '<div class="loc-group"><h3>Top trains</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
-    sortedTrains.slice(0, 15).forEach(([train, count]) => { html += '<span class="loc-badge"><strong>' + esc(train) + '</strong> ' + count + '</span>'; });
-    if (sortedTrains.length > 15) html += '<span class="loc-badge" style="color:#999">+' + (sortedTrains.length - 15) + ' more</span>';
-    html += '</div></div>';
-
-    html += '<div class="loc-group"><h3>By month</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
-    sortedMonths.slice(0, 12).forEach(([m, count]) => {
-      const parts = m.split('-');
-      html += '<span class="loc-badge"><strong>' + parts[1] + '/' + parts[0] + '</strong> ' + count + '</span>';
-    });
-    html += '</div></div>';
-
-    document.getElementById('statsView').innerHTML = html;
+  function returnDoc(id) {
+    if (!confirm('Return this document to its location?')) return;
+    let recs = getRecs();
+    const r = recs.find(r => r.id === id);
+    if (!r) return;
+    r.returned = true;
+    setRecs(recs);
+    refreshAll();
+    toast('Document returned', 'success');
   }
 
   // ======================== CLEAR FILTERS ========================
@@ -1418,8 +1469,7 @@
     renderAssignForm();
     renderSearch();
     renderLocations();
-    renderRecent();
-    renderDetailedStats();
+    renderPickups();
     populateFilters();
   }
 
@@ -1427,14 +1477,13 @@
   function switchFacilitySubTab(tab, btn) {
     document.querySelectorAll('#facilitySubTabs button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['asignar','buscar','ubicaciones','recientes','estadisticas'].forEach(t => {
+    ['asignar','buscar','ubicaciones','recogidas'].forEach(t => {
       document.getElementById('facility-tab-' + t).classList.toggle('hide', t !== tab);
     });
     if (tab === 'asignar') renderFacilityAssignForm();
     if (tab === 'buscar') renderFacilitySearch();
     if (tab === 'ubicaciones') renderFacilityLocations();
-    if (tab === 'recientes') renderFacilityRecent();
-    if (tab === 'estadisticas') renderFacilityDetailedStats();
+    if (tab === 'recogidas') renderFacilityPickups();
     renderFacilityStats();
   }
 
@@ -1509,6 +1558,8 @@
     document.getElementById('facAsDate').value = '';
     document.getElementById('facAsNotes').value = '';
     renderFacilityStats();
+    renderFacilitySearch();
+    renderFacilityLocations();
     toast('Document assigned', 'success');
   }
 
@@ -1555,12 +1606,17 @@
     grid.innerHTML = recs.map(r => {
       const loc = locs.find(l => l.id === r.locationId);
       const refLabel = r.category ? r.category + ' - ' + r.ref : r.ref;
-      return '<div class="rec-card">' +
+      const isPicked = r.pickupDate && !r.returned;
+      return '<div class="rec-card' + (isPicked ? '" style="opacity:0.5' : '') + '">' +
         '<div class="top"><div class="info"><span class="ref">' + esc(refLabel) + '</span></div></div>' +
         '<div class="body"><div class="location"><span class="loc-icon">' + (loc ? '&#128230;' : '&#128204;') + '</span>' +
         (loc ? '<div><div class="loc-text">' + esc(loc.name) + '</div>' + (r.documentDate ? '<div class="loc-date">' + formatDate(r.documentDate) + '</div>' : '') + (r.locationNotes ? '<div class="loc-hint">' + esc(r.locationNotes) + '</div>' : '') + '</div>' : '<span class="no-loc">Unassigned</span>') +
+        (isPicked ? '<div style="font-size:11px;color:var(--accent);margin-top:4px">&#128666; Picked up by ' + esc(r.pickupEmployeeName) + '</div>' : '') +
         '</div></div>' +
-        '<div class="actions"><button class="btn btn-sm btn-danger" onclick="facilityDeleteDoc(' + r.id + ')">Delete</button></div></div>';
+        '<div class="actions">' +
+        '<button class="btn btn-sm btn-warning" onclick="facilityEditDoc(' + r.id + ')">Edit</button>' +
+        (isPicked ? '' : '<button class="btn btn-sm btn-success" onclick="facilityPickupDoc(' + r.id + ')">&#128666; Pick up</button>') +
+        '<button class="btn btn-sm btn-danger" onclick="facilityDeleteDoc(' + r.id + ')">Delete</button></div></div>';
     }).join('');
   }
 
@@ -1581,10 +1637,45 @@
     setRecs(recs);
     renderFacilitySearch();
     renderFacilityLocations();
-    renderFacilityRecent();
-    renderFacilityDetailedStats();
+    renderFacilityPickups();
     renderFacilityStats();
     toast('Document deleted', 'error');
+  }
+
+  // ======================== FACILITY PICKUPS ========================
+  function renderFacilityPickups() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const picked = recs.filter(r => r.pickupDate && !r.returned);
+    const el = document.getElementById('facPickupsView');
+    if (!picked.length) {
+      el.innerHTML = '<div class="empty-state"><h3>No documents picked up</h3></div>';
+      return;
+    }
+    el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px">' + picked.map(r => {
+      const loc = locs.find(l => l.id === r.locationId);
+      const refLabel = r.category ? r.category + ' - ' + r.ref : r.ref;
+      return '<div class="rec-card" style="border-left:4px solid var(--accent)">' +
+        '<div class="top"><div class="info"><span class="ref">' + esc(refLabel) + '</span></div></div>' +
+        '<div class="body">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 0;font-size:13px">' +
+        '<div><span style="color:var(--text-light)">Employee:</span><br><strong>' + esc(r.pickupEmployeeName) + '</strong></div>' +
+        '<div><span style="color:var(--text-light)">ID:</span><br><strong>' + esc(r.pickupEmployeeId) + '</strong></div>' +
+        '<div><span style="color:var(--text-light)">Pickup date:</span><br><strong>' + formatDate(r.pickupDate) + '</strong></div>' +
+        '<div><span style="color:var(--text-light)">Location:</span><br><strong>' + (loc ? esc(loc.name) : '-') + '</strong></div>' +
+        '</div></div>' +
+        '<div class="actions"><button class="btn btn-sm btn-success" onclick="facilityReturnDoc(' + r.id + ')">&#128259; Return</button></div></div>';
+    }).join('') + '</div>';
+  }
+
+  function facilityEditDoc(id) {
+    editDoc(id);
+  }
+  function facilityPickupDoc(id) {
+    pickupDoc(id);
+  }
+  function facilityReturnDoc(id) {
+    returnDoc(id);
   }
 
   function renderFacilityLocations() {
@@ -1603,77 +1694,6 @@
         (items.length ? items.map(r => '<span class="loc-badge"><strong>' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</strong>' + (r.documentDate ? ' <span class="date-tag">' + formatDate(r.documentDate) + '</span>' : '') + (r.locationNotes ? ' <span style="color:#999">- ' + esc(r.locationNotes) + '</span>' : '') + '</span>').join('') : '<span style="font-size:12px;color:#999;padding:2px 0">Empty</span>') +
         '</div></div>';
     }).join('');
-  }
-
-  function renderFacilityRecent() {
-    const recs = getRecs();
-    const locs = getLocs();
-    const recent = recs.filter(r => r.locationId).sort((a, b) => b.id - a.id).slice(0, 50);
-    const el = document.getElementById('facRecentView');
-    if (!recent.length) {
-      el.innerHTML = '<div class="empty-state"><h3>No assignments yet</h3><p style="color:#aaa">Assign documents from the Assign tab</p></div>';
-      return;
-    }
-    el.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px">' + recent.map(r => {
-      const loc = locs.find(l => l.id === r.locationId);
-      return '<div class="rec-card" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px">' +
-        '<div><span class="ref" style="font-size:12px;padding:1px 8px">' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</span>' +
-        (r.documentDate ? ' <span style="font-size:12px;color:var(--text-light)">' + formatDate(r.documentDate) + '</span>' : '') + '</div>' +
-        '<div style="text-align:right"><span style="font-size:13px;font-weight:500;color:var(--success)">' + (loc ? esc(loc.name) : '') + '</span>' +
-        (r.locationNotes ? '<br><span style="font-size:11px;color:var(--text-light)">' + esc(r.locationNotes) + '</span>' : '') + '</div></div>';
-    }).join('') + '</div>';
-  }
-
-  function renderFacilityDetailedStats() {
-    const recs = getRecs();
-    const locs = getLocs();
-    const assigned = recs.filter(r => r.locationId);
-
-    const byLoc = {};
-    locs.forEach(l => { byLoc[l.id] = { name: l.name, count: 0 }; });
-    assigned.forEach(r => { if (byLoc[r.locationId]) byLoc[r.locationId].count++; });
-
-    const byRef = {};
-    const refs = getRefs();
-    refs.forEach(r => { const key = getRefDisplay(r); byRef[key] = 0; });
-    assigned.forEach(r => { const key = r.category ? r.category + ' - ' + r.ref : r.ref; byRef[key] = (byRef[key] || 0) + 1; });
-
-    const byMonth = {};
-    assigned.forEach(r => { if (r.documentDate) { const m = r.documentDate.slice(0, 7); byMonth[m] = (byMonth[m] || 0) + 1; } });
-    const sortedMonths = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).reverse();
-
-    const now = new Date();
-    const monthStart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
-    const thisMonth = assigned.filter(r => r.documentDate && r.documentDate >= monthStart).length;
-
-    let html = '';
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px">' +
-      '<div class="stat-card"><div class="num">' + assigned.length + '</div><div class="label">Facility Registers assignments</div></div>' +
-      '<div class="stat-card green"><div class="num">' + locs.length + '</div><div class="label">Locations</div></div>' +
-      '<div class="stat-card orange"><div class="num">' + thisMonth + '</div><div class="label">This month</div></div></div>';
-
-    html += '<div class="loc-group"><h3>By location</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
-    Object.values(byLoc).sort((a, b) => b.count - a.count).forEach(l => {
-      const pct = assigned.length ? Math.round(l.count / assigned.length * 100) : 0;
-      html += '<span class="loc-badge"><strong>' + esc(l.name) + '</strong> ' + l.count + ' <span style="color:#999">(' + pct + '%)</span></span>';
-    });
-    html += '</div></div>';
-
-    html += '<div class="loc-group"><h3>By reference</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
-    Object.entries(byRef).sort((a, b) => b[1] - a[1]).forEach(([ref, count]) => {
-      const pct = assigned.length ? Math.round(count / assigned.length * 100) : 0;
-      html += '<span class="loc-badge"><strong>' + ref + '</strong> ' + count + ' <span style="color:#999">(' + pct + '%)</span></span>';
-    });
-    html += '</div></div>';
-
-    html += '<div class="loc-group"><h3>By month</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
-    sortedMonths.slice(0, 12).forEach(([m, count]) => {
-      const parts = m.split('-');
-      html += '<span class="loc-badge"><strong>' + parts[1] + '/' + parts[0] + '</strong> ' + count + '</span>';
-    });
-    html += '</div></div>';
-
-    document.getElementById('facStatsView').innerHTML = html;
   }
 
   function facilityImportDocuments(event) {
@@ -1731,8 +1751,7 @@
         renderFacilityAssignForm();
         renderFacilitySearch();
         renderFacilityLocations();
-        renderFacilityRecent();
-        renderFacilityDetailedStats();
+        renderFacilityPickups();
         facilityPopulateFilters();
         event.target.value = '';
         toast(added + ' documents imported to Facility Registers', 'success');
@@ -1833,14 +1852,13 @@
   function switchHMWSubTab(tab, btn) {
     document.querySelectorAll('#hmwSubTabs button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['asignar','buscar','ubicaciones','recientes','estadisticas'].forEach(t => {
+    ['asignar','buscar','ubicaciones','recogidas'].forEach(t => {
       document.getElementById('hmw-tab-' + t).classList.toggle('hide', t !== tab);
     });
     if (tab === 'asignar') renderHMWAssignForm();
     if (tab === 'buscar') renderHMWSearch();
     if (tab === 'ubicaciones') renderHMWLocations();
-    if (tab === 'recientes') renderHMWRecent();
-    if (tab === 'estadisticas') renderHMWDetailedStats();
+    if (tab === 'recogidas') renderHMWPickups();
     renderHMWStats();
   }
 
@@ -1915,6 +1933,8 @@
     document.getElementById('hmwAsDate').value = '';
     document.getElementById('hmwAsNotes').value = '';
     renderHMWStats();
+    renderHMWSearch();
+    renderHMWLocations();
     toast('Document assigned', 'success');
   }
 
@@ -1961,12 +1981,17 @@
     grid.innerHTML = recs.map(r => {
       const loc = locs.find(l => l.id === r.locationId);
       const refLabel = r.category ? r.category + ' - ' + r.ref : r.ref;
-      return '<div class="rec-card">' +
+      const isPicked = r.pickupDate && !r.returned;
+      return '<div class="rec-card' + (isPicked ? '" style="opacity:0.5' : '') + '">' +
         '<div class="top"><div class="info"><span class="ref">' + esc(refLabel) + '</span></div></div>' +
         '<div class="body"><div class="location"><span class="loc-icon">' + (loc ? '&#128230;' : '&#128204;') + '</span>' +
         (loc ? '<div><div class="loc-text">' + esc(loc.name) + '</div>' + (r.documentDate ? '<div class="loc-date">' + formatDate(r.documentDate) + '</div>' : '') + (r.locationNotes ? '<div class="loc-hint">' + esc(r.locationNotes) + '</div>' : '') + '</div>' : '<span class="no-loc">Unassigned</span>') +
+        (isPicked ? '<div style="font-size:11px;color:var(--accent);margin-top:4px">&#128666; Picked up by ' + esc(r.pickupEmployeeName) + '</div>' : '') +
         '</div></div>' +
-        '<div class="actions"><button class="btn btn-sm btn-danger" onclick="hmwDeleteDoc(' + r.id + ')">Delete</button></div></div>';
+        '<div class="actions">' +
+        '<button class="btn btn-sm btn-warning" onclick="hmwEditDoc(' + r.id + ')">Edit</button>' +
+        (isPicked ? '' : '<button class="btn btn-sm btn-success" onclick="hmwPickupDoc(' + r.id + ')">&#128666; Pick up</button>') +
+        '<button class="btn btn-sm btn-danger" onclick="hmwDeleteDoc(' + r.id + ')">Delete</button></div></div>';
     }).join('');
   }
 
@@ -1987,10 +2012,45 @@
     setRecs(recs);
     renderHMWSearch();
     renderHMWLocations();
-    renderHMWRecent();
-    renderHMWDetailedStats();
+    renderHMWPickups();
     renderHMWStats();
     toast('Document deleted', 'error');
+  }
+
+  // ======================== HMW PICKUPS ========================
+  function renderHMWPickups() {
+    const recs = getRecs();
+    const locs = getLocs();
+    const picked = recs.filter(r => r.pickupDate && !r.returned);
+    const el = document.getElementById('hmwPickupsView');
+    if (!picked.length) {
+      el.innerHTML = '<div class="empty-state"><h3>No documents picked up</h3></div>';
+      return;
+    }
+    el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px">' + picked.map(r => {
+      const loc = locs.find(l => l.id === r.locationId);
+      const refLabel = r.category ? r.category + ' - ' + r.ref : r.ref;
+      return '<div class="rec-card" style="border-left:4px solid var(--accent)">' +
+        '<div class="top"><div class="info"><span class="ref">' + esc(refLabel) + '</span></div></div>' +
+        '<div class="body">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 0;font-size:13px">' +
+        '<div><span style="color:var(--text-light)">Employee:</span><br><strong>' + esc(r.pickupEmployeeName) + '</strong></div>' +
+        '<div><span style="color:var(--text-light)">ID:</span><br><strong>' + esc(r.pickupEmployeeId) + '</strong></div>' +
+        '<div><span style="color:var(--text-light)">Pickup date:</span><br><strong>' + formatDate(r.pickupDate) + '</strong></div>' +
+        '<div><span style="color:var(--text-light)">Location:</span><br><strong>' + (loc ? esc(loc.name) : '-') + '</strong></div>' +
+        '</div></div>' +
+        '<div class="actions"><button class="btn btn-sm btn-success" onclick="hmwReturnDoc(' + r.id + ')">&#128259; Return</button></div></div>';
+    }).join('') + '</div>';
+  }
+
+  function hmwEditDoc(id) {
+    editDoc(id);
+  }
+  function hmwPickupDoc(id) {
+    pickupDoc(id);
+  }
+  function hmwReturnDoc(id) {
+    returnDoc(id);
   }
 
   function renderHMWLocations() {
@@ -2009,77 +2069,6 @@
         (items.length ? items.map(r => '<span class="loc-badge"><strong>' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</strong>' + (r.documentDate ? ' <span class="date-tag">' + formatDate(r.documentDate) + '</span>' : '') + (r.locationNotes ? ' <span style="color:#999">- ' + esc(r.locationNotes) + '</span>' : '') + '</span>').join('') : '<span style="font-size:12px;color:#999;padding:2px 0">Empty</span>') +
         '</div></div>';
     }).join('');
-  }
-
-  function renderHMWRecent() {
-    const recs = getRecs();
-    const locs = getLocs();
-    const recent = recs.filter(r => r.locationId).sort((a, b) => b.id - a.id).slice(0, 50);
-    const el = document.getElementById('hmwRecentView');
-    if (!recent.length) {
-      el.innerHTML = '<div class="empty-state"><h3>No assignments yet</h3><p style="color:#aaa">Assign documents from the Assign tab</p></div>';
-      return;
-    }
-    el.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px">' + recent.map(r => {
-      const loc = locs.find(l => l.id === r.locationId);
-      return '<div class="rec-card" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px">' +
-        '<div><span class="ref" style="font-size:12px;padding:1px 8px">' + esc(r.category ? r.category + ' - ' + r.ref : r.ref) + '</span>' +
-        (r.documentDate ? ' <span style="font-size:12px;color:var(--text-light)">' + formatDate(r.documentDate) + '</span>' : '') + '</div>' +
-        '<div style="text-align:right"><span style="font-size:13px;font-weight:500;color:var(--success)">' + (loc ? esc(loc.name) : '') + '</span>' +
-        (r.locationNotes ? '<br><span style="font-size:11px;color:var(--text-light)">' + esc(r.locationNotes) + '</span>' : '') + '</div></div>';
-    }).join('') + '</div>';
-  }
-
-  function renderHMWDetailedStats() {
-    const recs = getRecs();
-    const locs = getLocs();
-    const assigned = recs.filter(r => r.locationId);
-
-    const byLoc = {};
-    locs.forEach(l => { byLoc[l.id] = { name: l.name, count: 0 }; });
-    assigned.forEach(r => { if (byLoc[r.locationId]) byLoc[r.locationId].count++; });
-
-    const byRef = {};
-    const refs = getRefs();
-    refs.forEach(r => { const key = getRefDisplay(r); byRef[key] = 0; });
-    assigned.forEach(r => { const key = r.category ? r.category + ' - ' + r.ref : r.ref; byRef[key] = (byRef[key] || 0) + 1; });
-
-    const byMonth = {};
-    assigned.forEach(r => { if (r.documentDate) { const m = r.documentDate.slice(0, 7); byMonth[m] = (byMonth[m] || 0) + 1; } });
-    const sortedMonths = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0])).reverse();
-
-    const now = new Date();
-    const monthStart = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
-    const thisMonth = assigned.filter(r => r.documentDate && r.documentDate >= monthStart).length;
-
-    let html = '';
-    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px">' +
-      '<div class="stat-card"><div class="num">' + assigned.length + '</div><div class="label">HMW Registers assignments</div></div>' +
-      '<div class="stat-card green"><div class="num">' + locs.length + '</div><div class="label">Locations</div></div>' +
-      '<div class="stat-card orange"><div class="num">' + thisMonth + '</div><div class="label">This month</div></div></div>';
-
-    html += '<div class="loc-group"><h3>By location</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
-    Object.values(byLoc).sort((a, b) => b.count - a.count).forEach(l => {
-      const pct = assigned.length ? Math.round(l.count / assigned.length * 100) : 0;
-      html += '<span class="loc-badge"><strong>' + esc(l.name) + '</strong> ' + l.count + ' <span style="color:#999">(' + pct + '%)</span></span>';
-    });
-    html += '</div></div>';
-
-    html += '<div class="loc-group"><h3>By reference</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
-    Object.entries(byRef).sort((a, b) => b[1] - a[1]).forEach(([ref, count]) => {
-      const pct = assigned.length ? Math.round(count / assigned.length * 100) : 0;
-      html += '<span class="loc-badge"><strong>' + ref + '</strong> ' + count + ' <span style="color:#999">(' + pct + '%)</span></span>';
-    });
-    html += '</div></div>';
-
-    html += '<div class="loc-group"><h3>By month</h3><div style="display:flex;flex-wrap:wrap;gap:6px">';
-    sortedMonths.slice(0, 12).forEach(([m, count]) => {
-      const parts = m.split('-');
-      html += '<span class="loc-badge"><strong>' + parts[1] + '/' + parts[0] + '</strong> ' + count + '</span>';
-    });
-    html += '</div></div>';
-
-    document.getElementById('hmwStatsView').innerHTML = html;
   }
 
   function hmwImportDocuments(event) {
@@ -2137,8 +2126,7 @@
         renderHMWAssignForm();
         renderHMWSearch();
         renderHMWLocations();
-        renderHMWRecent();
-        renderHMWDetailedStats();
+        renderHMWPickups();
         hmwPopulateFilters();
         event.target.value = '';
         toast(added + ' documents imported to HMW Registers', 'success');
@@ -2271,8 +2259,7 @@
     renderFacilityAssignForm();
     renderFacilitySearch();
     renderFacilityLocations();
-    renderFacilityRecent();
-    renderFacilityDetailedStats();
+    renderFacilityPickups();
     facilityPopulateFilters();
   }
 
@@ -2287,8 +2274,7 @@
     renderHMWAssignForm();
     renderHMWSearch();
     renderHMWLocations();
-    renderHMWRecent();
-    renderHMWDetailedStats();
+    renderHMWPickups();
     hmwPopulateFilters();
   }
 
@@ -2337,36 +2323,10 @@
         return;
       }
 
-      // Si falló, mostrar error y opción de registrarse
+      // Si falló, mostrar error sin opción de registrarse
       const errMsg = data.error_description || data.error || data.msg || 'Login failed';
       console.log('Login error:', data);
-      err.textContent = errMsg + '. Try signing up first?';
-
-      // Preguntar si quiere registrarse
-      if (confirm('User not found. Create new account "' + user + '"?')) {
-        err.textContent = 'Creating account...';
-        const signupRes = await fetch(AUTH_URL + '/signup', {
-          method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password: pass })
-        });
-        const signupData = await signupRes.json();
-
-        if (signupRes.ok && signupData.access_token) {
-          supabaseToken = signupData.access_token;
-          localStorage.setItem('supabase_token', signupData.access_token);
-          localStorage.setItem('supabase_email', email);
-          document.getElementById('loginOverlay').style.display = 'none';
-          document.getElementById('btnLogout').style.display = '';
-          await loadAllData();
-          document.getElementById('btnHome').style.display = '';
-          goHome();
-        } else if (signupRes.ok && !signupData.access_token) {
-          err.textContent = 'Check your email for confirmation link. OR disable email confirm in Supabase: Authentication > Settings > Confirm email = OFF';
-        } else {
-          err.textContent = 'Signup error: ' + (signupData.msg || signupData.error_description || JSON.stringify(signupData));
-        }
-      }
+      err.textContent = 'Invalid username or password';
     } catch (e) {
       err.textContent = 'Connection error: ' + e.message;
       console.error('Login exception:', e);
