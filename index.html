@@ -288,7 +288,10 @@
         </div>
         <button class="btn-save" onclick="assignDocument()">Save Assignment</button>
         <div style="margin-top:12px">
-          <button class="btn btn-warning btn-sm" onclick="document.getElementById('importDocInput').click()" style="width:100%">Import Documents (Excel)</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-warning btn-sm" onclick="document.getElementById('importDocInput').click()" style="flex:1">Import Documents (Excel)</button>
+            <button class="btn btn-sm btn-outline" onclick="showExcelHelp('qmw')" title="Excel structure">?</button>
+          </div>
           <input type="file" id="importDocInput" class="import-input" accept=".xlsx,.xls" onchange="importDocuments(event)">
         </div>
       </div>
@@ -381,7 +384,10 @@
         </div>
         <button class="btn-save" onclick="facilityAssignDocument()">Save Assignment</button>
         <div style="margin-top:12px">
-          <button class="btn btn-warning btn-sm" onclick="document.getElementById('facImportDocInput').click()" style="width:100%">Import Documents (Excel)</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-warning btn-sm" onclick="document.getElementById('facImportDocInput').click()" style="flex:1">Import Documents (Excel)</button>
+            <button class="btn btn-sm btn-outline" onclick="showExcelHelp('facility')" title="Excel structure">?</button>
+          </div>
           <input type="file" id="facImportDocInput" class="import-input" accept=".xlsx,.xls" onchange="facilityImportDocuments(event)">
         </div>
       </div>
@@ -471,7 +477,10 @@
         </div>
         <button class="btn-save" onclick="hmwAssignDocument()">Save Assignment</button>
         <div style="margin-top:12px">
-          <button class="btn btn-warning btn-sm" onclick="document.getElementById('hmwImportDocInput').click()" style="width:100%">Import Documents (Excel)</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-warning btn-sm" onclick="document.getElementById('hmwImportDocInput').click()" style="flex:1">Import Documents (Excel)</button>
+            <button class="btn btn-sm btn-outline" onclick="showExcelHelp('hmw')" title="Excel structure">?</button>
+          </div>
           <input type="file" id="hmwImportDocInput" class="import-input" accept=".xlsx,.xls" onchange="hmwImportDocuments(event)">
         </div>
       </div>
@@ -527,7 +536,10 @@
       </div>
     </div>
     <div style="margin-bottom:10px">
-      <button class="btn btn-warning btn-sm" onclick="document.getElementById('importLocInput').click()">Import from Excel</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-warning btn-sm" onclick="document.getElementById('importLocInput').click()" style="flex:1">Import from Excel</button>
+        <button class="btn btn-sm btn-outline" onclick="showExcelHelp('locs')" title="Excel structure">?</button>
+      </div>
       <input type="file" id="importLocInput" class="import-input" accept=".xlsx,.xls" onchange="importLocations(event)">
     </div>
     <div id="locationList" style="margin-top:6px"></div>
@@ -594,12 +606,25 @@
       </div>
     </div>
     <div style="margin-bottom:10px">
-      <button class="btn btn-warning btn-sm" onclick="document.getElementById('importRefsInput').click()">Import from Excel</button>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-warning btn-sm" onclick="document.getElementById('importRefsInput').click()" style="flex:1">Import from Excel</button>
+        <button class="btn btn-sm btn-outline" onclick="showExcelHelp('refs')" title="Excel structure">?</button>
+      </div>
       <input type="file" id="importRefsInput" class="import-input" accept=".xlsx,.xls" onchange="importReferences(event)">
     </div>
     <div id="refsList" style="margin-top:6px"></div>
     <div class="form-actions">
       <button class="btn btn-outline" onclick="closeModal('modalRefs')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalExcelHelp">
+  <div class="modal" style="max-width:580px">
+    <h2 id="excelHelpTitle">Excel Structure</h2>
+    <div id="excelHelpContent" style="font-size:13px;line-height:1.6"></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalExcelHelp')">Close</button>
     </div>
   </div>
 </div>
@@ -1313,6 +1338,86 @@
       } catch (err) { toast('Error: ' + err.message, 'error'); event.target.value = ''; }
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  function showExcelHelp(type) {
+    const title = document.getElementById('excelHelpTitle');
+    const content = document.getElementById('excelHelpContent');
+
+    const help = {
+      qmw: {
+        title: 'Excel Structure - Import Documents',
+        html: '<p style="margin-bottom:10px">The Excel <strong>must have headers</strong> in the first row. Accepted column names:</p>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+          '<tr style="background:var(--primary-light);color:#fff"><th style="padding:6px 8px;text-align:left;border:1px solid var(--border)">Column</th><th style="padding:6px 8px;text-align:left;border:1px solid var(--border)">Accepted names</th><th style="padding:6px 8px;text-align:left;border:1px solid var(--border)">Required</th></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Train</td><td style="padding:6px 8px;border:1px solid var(--border)">Train, train, TREN, tren</td><td style="padding:6px 8px;border:1px solid var(--border);color:var(--danger)">Yes</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Reference</td><td style="padding:6px 8px;border:1px solid var(--border)">Reference, reference, Ref, REF, ref</td><td style="padding:6px 8px;border:1px solid var(--border);color:var(--danger)">Yes</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Category</td><td style="padding:6px 8px;border:1px solid var(--border)">Category, category, Categoria, categoria</td><td style="padding:6px 8px;border:1px solid var(--border)">Only for Modifications / Rework</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Date</td><td style="padding:6px 8px;border:1px solid var(--border)">Date, date, Fecha, fecha, DATE</td><td style="padding:6px 8px;border:1px solid var(--border)">No</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Location</td><td style="padding:6px 8px;border:1px solid var(--border)">Location, location, Ubicacion, ubicacion</td><td style="padding:6px 8px;border:1px solid var(--border)">No</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Notes</td><td style="padding:6px 8px;border:1px solid var(--border)">Notes, notes, Notas, notas</td><td style="padding:6px 8px;border:1px solid var(--border)">No</td></tr>' +
+          '</table>' +
+          '<div style="margin-top:12px;padding:10px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
+          '<strong>Example:</strong><br>' +
+          '<code style="font-size:11px">Train,Reference,Date,Location<br>SAS1B-01,IR,2026-01-15,Shelf 1<br>SAS1B-02,RI-001,2026-02-20,Drawer A</code></div>'
+      },
+      facility: {
+        title: 'Excel Structure - Facility Registers',
+        html: '<p style="margin-bottom:10px">The Excel <strong>must have headers</strong> in the first row. Accepted column names:</p>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+          '<tr style="background:var(--primary-light);color:#fff"><th style="padding:6px 8px;text-align:left;border:1px solid var(--border)">Column</th><th style="padding:6px 8px;text-align:left;border:1px solid var(--border)">Accepted names</th><th style="padding:6px 8px;text-align:left;border:1px solid var(--border)">Required</th></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Reference</td><td style="padding:6px 8px;border:1px solid var(--border)">Reference, reference, Ref, REF, ref</td><td style="padding:6px 8px;border:1px solid var(--border);color:var(--danger)">Yes</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Category</td><td style="padding:6px 8px;border:1px solid var(--border)">Category, category, Categoria, categoria</td><td style="padding:6px 8px;border:1px solid var(--border);color:var(--danger)">Yes (Internal / External)</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Date</td><td style="padding:6px 8px;border:1px solid var(--border)">Date, date, Fecha, fecha, DATE</td><td style="padding:6px 8px;border:1px solid var(--border)">No</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Location</td><td style="padding:6px 8px;border:1px solid var(--border)">Location, location, Ubicacion, ubicacion</td><td style="padding:6px 8px;border:1px solid var(--border)">No</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Notes</td><td style="padding:6px 8px;border:1px solid var(--border)">Notes, notes, Notas, notas</td><td style="padding:6px 8px;border:1px solid var(--border)">No</td></tr>' +
+          '</table>' +
+          '<div style="margin-top:12px;padding:10px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
+          '<strong>Example:</strong><br>' +
+          '<code style="font-size:11px">Reference,Category,Date,Location<br>RI-001,Internal,2026-01-15,Shelf 1<br>RE-001,External,2026-02-20,Drawer A</code></div>'
+      },
+      hmw: {
+        title: 'Excel Structure - HMW Registers',
+        html: '<p style="margin-bottom:10px">The Excel <strong>must have headers</strong> in the first row. Accepted column names:</p>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+          '<tr style="background:var(--primary-light);color:#fff"><th style="padding:6px 8px;text-align:left;border:1px solid var(--border)">Column</th><th style="padding:6px 8px;text-align:left;border:1px solid var(--border)">Accepted names</th><th style="padding:6px 8px;text-align:left;border:1px solid var(--border)">Required</th></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Reference</td><td style="padding:6px 8px;border:1px solid var(--border)">Reference, reference, Ref, REF, ref</td><td style="padding:6px 8px;border:1px solid var(--border);color:var(--danger)">Yes</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Category</td><td style="padding:6px 8px;border:1px solid var(--border)">Category, category, Categoria, categoria</td><td style="padding:6px 8px;border:1px solid var(--border);color:var(--danger)">Yes (Preventive / Corrective)</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Date</td><td style="padding:6px 8px;border:1px solid var(--border)">Date, date, Fecha, fecha, DATE</td><td style="padding:6px 8px;border:1px solid var(--border)">No</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Location</td><td style="padding:6px 8px;border:1px solid var(--border)">Location, location, Ubicacion, ubicacion</td><td style="padding:6px 8px;border:1px solid var(--border)">No</td></tr>' +
+          '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Notes</td><td style="padding:6px 8px;border:1px solid var(--border)">Notes, notes, Notas, notas</td><td style="padding:6px 8px;border:1px solid var(--border)">No</td></tr>' +
+          '</table>' +
+          '<div style="margin-top:12px;padding:10px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
+          '<strong>Example:</strong><br>' +
+          '<code style="font-size:11px">Reference,Category,Date,Location<br>HP-001,Preventive,2026-01-15,Shelf 1<br>HC-001,Corrective,2026-02-20,Drawer A</code></div>'
+      },
+      refs: {
+        title: 'Excel Structure - Import References',
+        html: '<p style="margin-bottom:10px">The Excel must have data starting from the first row <strong>(no headers)</strong>.</p>' +
+          '<p style="font-size:12px;margin-bottom:8px"><strong>Without categories</strong> (Time Base, Corrective QMW, etc.):</p>' +
+          '<div style="padding:8px;background:#f8f9fa;border-radius:6px;font-size:12px;margin-bottom:10px">' +
+          '<code style="font-size:11px">RI-001<br>RI-002<br>RE-001</code></div>' +
+          '<p style="font-size:12px;margin-bottom:8px"><strong>With categories</strong> (Facility, HMW, Modifications, Rework):</p>' +
+          '<div style="padding:8px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
+          '<table style="width:100%;font-size:12px">' +
+          '<tr><td style="padding:2px 6px;font-weight:600">Column A</td><td style="padding:2px 6px">Category (e.g. Internal, External)</td></tr>' +
+          '<tr><td style="padding:2px 6px;font-weight:600">Column B</td><td style="padding:2px 6px">Reference name</td></tr>' +
+          '</table>' +
+          '<code style="font-size:11px;display:block;margin-top:4px">Internal,RI-001<br>External,RE-001</code></div>'
+      },
+      locs: {
+        title: 'Excel Structure - Import Locations',
+        html: '<p style="margin-bottom:10px">The Excel must have data starting from the first row <strong>(no headers)</strong>, one location name per row:</p>' +
+          '<div style="padding:10px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
+          '<code style="font-size:11px">Shelf 1<br>Drawer A<br>Cabinet B<br>Folder 3</code></div>'
+      }
+    };
+
+    const data = help[type];
+    if (!data) return;
+    title.textContent = data.title;
+    content.innerHTML = data.html;
+    openModal('modalExcelHelp');
   }
 
   // ======================== REFERENCES MANAGEMENT ========================
