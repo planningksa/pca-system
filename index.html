@@ -1358,8 +1358,14 @@
           '<tr><td style="padding:6px 8px;border:1px solid var(--border);font-weight:600">Notes</td><td style="padding:6px 8px;border:1px solid var(--border)">Notes, notes, Notas, notas</td><td style="padding:6px 8px;border:1px solid var(--border)">No</td></tr>' +
           '</table>' +
           '<div style="margin-top:12px;padding:10px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
-          '<strong>Example:</strong><br>' +
-          '<code style="font-size:11px">Train,Reference,Date,Location<br>SAS1B-01,IR,2026-01-15,Shelf 1<br>SAS1B-02,RI-001,2026-02-20,Drawer A</code></div>'
+          '<strong>Example (Interventions / Time Base / Corrective / Vandalism):</strong><br>' +
+          '<code style="font-size:11px">Train,Reference,Date,Location<br>SAS1B-01,IR,2026-01-15,Shelf 1<br>SAS1B-02,IS,2026-02-20,Drawer A</code></div>' +
+          '<div style="margin-top:8px;padding:10px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
+          '<strong>Example (Modifications with Category):</strong><br>' +
+          '<code style="font-size:11px">Train,Reference,Category,Date,Location<br>SAS1B-01,33423,ELECTRICAL,2026-01-15,Shelf 1<br>SAS1B-02,54545,MECHANICAL,2026-02-20,Drawer A</code></div>' +
+          '<div style="margin-top:8px;padding:10px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
+          '<strong>Example (Rework with Category):</strong><br>' +
+          '<code style="font-size:11px">Train,Reference,Category,Date,Location<br>SAS1B-01,R034332,ELECTRICAL,2026-01-15,Shelf 1<br>SAS1B-02,R055654,MECHANICAL,2026-02-20,Drawer A</code></div>'
       },
       facility: {
         title: 'Excel Structure - Facility Registers',
@@ -1374,7 +1380,7 @@
           '</table>' +
           '<div style="margin-top:12px;padding:10px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
           '<strong>Example:</strong><br>' +
-          '<code style="font-size:11px">Reference,Category,Date,Location<br>RI-001,Internal,2026-01-15,Shelf 1<br>RE-001,External,2026-02-20,Drawer A</code></div>'
+          '<code style="font-size:11px">Reference,Category,Date,Location<br>RMI-001,Internal,2026-01-15,Shelf 1<br>EXT-002,External,2026-02-20,Drawer A</code></div>'
       },
       hmw: {
         title: 'Excel Structure - HMW Registers',
@@ -1389,7 +1395,7 @@
           '</table>' +
           '<div style="margin-top:12px;padding:10px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
           '<strong>Example:</strong><br>' +
-          '<code style="font-size:11px">Reference,Category,Date,Location<br>HP-001,Preventive,2026-01-15,Shelf 1<br>HC-001,Corrective,2026-02-20,Drawer A</code></div>'
+          '<code style="font-size:11px">Reference,Category,Date,Location<br>Z1234567,Preventive,2026-01-15,Shelf 1<br>Z1234567,Corrective,2026-02-20,Drawer A</code></div>'
       },
       refs: {
         title: 'Excel Structure - Import References',
@@ -1400,10 +1406,19 @@
           '<p style="font-size:12px;margin-bottom:8px"><strong>With categories</strong> (Facility, HMW, Modifications, Rework):</p>' +
           '<div style="padding:8px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
           '<table style="width:100%;font-size:12px">' +
-          '<tr><td style="padding:2px 6px;font-weight:600">Column A</td><td style="padding:2px 6px">Category (e.g. Internal, External)</td></tr>' +
+          '<tr><td style="padding:2px 6px;font-weight:600">Column A</td><td style="padding:2px 6px">Category</td></tr>' +
           '<tr><td style="padding:2px 6px;font-weight:600">Column B</td><td style="padding:2px 6px">Reference name</td></tr>' +
           '</table>' +
-          '<code style="font-size:11px;display:block;margin-top:4px">Internal,RI-001<br>External,RE-001</code></div>'
+          '<code style="font-size:11px;display:block;margin-top:4px">Internal,RMI-001<br>External,EXT-002</code></div>' +
+          '<p style="font-size:12px;margin:8px 0"><strong>HMW Registers:</strong></p>' +
+          '<div style="padding:8px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
+          '<code style="font-size:11px">Preventive,Z1234567<br>Corrective,Z1234567</code></div>' +
+          '<p style="font-size:12px;margin:8px 0"><strong>Modifications:</strong></p>' +
+          '<div style="padding:8px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
+          '<code style="font-size:11px">ELECTRICAL,33423<br>MECHANICAL,54545</code></div>' +
+          '<p style="font-size:12px;margin:8px 0"><strong>Rework:</strong></p>' +
+          '<div style="padding:8px;background:#f8f9fa;border-radius:6px;font-size:12px">' +
+          '<code style="font-size:11px">ELECTRICAL,R034332<br>MECHANICAL,R055654</code></div>'
       },
       locs: {
         title: 'Excel Structure - Import Locations',
